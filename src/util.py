@@ -9,6 +9,27 @@ def magnitudes(v):
 	return sqrt(sum(v**2,axis=-1))
 def close(a,b):
   return absolute(a-b)<1e-5
+def mid(a):
+    return .5*(amax(a)+amin(a))
+def extremes(a):
+    return array([amin(a),amax(a)])
+def span(a):
+    return amax(a)-amin(a)
+def sqr_magnitude(x):
+    return sum(x*x,axis=-1)
+def combine_topologies(node_sets,seg_sets):
+    assert(len(node_sets)==len(seg_sets))
+    all_nodes = vstack(tuple(node_sets))
+    offsets = cumsum( [0] + map(lambda x: shape(x)[0], node_sets)[:-1] )
+    seg_lists = tuple([os+bs for bs,os in zip(seg_sets,offsets)])
+    return all_nodes,seg_lists
+def subdivide_topology(nodes,segs):
+    n_nodes = shape(nodes)[0]; n_seg = shape(segs)[0]
+    nodes = vstack((nodes,.5*sum(nodes[segs],axis=1)))
+    segs_1 = hstack((segs[:,0,None],arange(n_seg)[...,None]+n_nodes))
+    segs_2 = hstack((arange(n_seg)[...,None]+n_nodes,segs[:,1,None]))
+    return nodes,vstack((segs_1,segs_2))
+
 def unique_points(a,tol=1e-5,leafsize=10):
     '''Use KDTree to do uniqueness check within tolerance.
     '''

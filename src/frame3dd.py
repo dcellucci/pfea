@@ -148,7 +148,7 @@ def write_frame3dd_file(nodes,global_args,beam_sets,constraints,loads):
             if args['cross_section']=='circular':
                 Ro = .5*d1
                 th = args['th']*length_scaling
-                assert(th>=Ro)
+                assert(0<th<=Ro)
                 Ri = Ro-th
                 Ax = pi*(Ro**2-Ri**2)
                 Asy = Ax/(0.54414 + 2.97294*(Ri/Ro) - 1.51899*(Ri/Ro)**2 )
