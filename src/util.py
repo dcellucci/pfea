@@ -11,6 +11,8 @@ def close(a,b):
   return absolute(a-b)<1e-5
 def mid(a):
     return .5*(amax(a)+amin(a))
+def avg(a,axis=0):
+    return sum(a,axis=axis)/shape(a)[axis]
 def extremes(a):
     return array([amin(a),amax(a)])
 def span(a):
