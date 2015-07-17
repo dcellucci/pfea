@@ -4,6 +4,7 @@ from numpy import *
 import csv
 import datetime
 import sys
+from pfea.util import magnitudes
 
 def read_lowest_mode(filename):
     freq = -1
@@ -15,6 +16,25 @@ def read_lowest_mode(filename):
             return -1 #return -1 if the result can't be trusted
         elif "M A S S   N O R M A L I Z E D   M O D E   S H A P E S \n" in line:
             return float(searchlines[i+2].split(' ')[11])
+
+def compute_mass(nodes,beam_sets):
+    '''
+    For sets of beams, compute the mass
+    '''
+    m = []
+    for beams,args in beam_sets:
+        if args['cross_section']=='circular':
+            l = magnitudes(nodes[beams[...,1]]-nodes[beams[...,0]])
+            Ro = .5*args['d1']
+            a = pi*(Ro**2 - (Ro-args['th'])**2)
+            m.append(sum(l*a*args['rho']))
+        elif args['cross_section']=='rectangular':
+            l = magnitudes(nodes[beams[...,1]]-nodes[beams[...,0]])
+            a = args['d1']; b = args['d2']
+            m.append(sum(l*a*b*args['rho']))            
+        else:
+            raise(NotImplementedError)
+    return m
 
 def write_frame3dd_file(nodes,global_args,beam_sets,constraints,loads):
     '''
@@ -47,9 +67,9 @@ def write_frame3dd_file(nodes,global_args,beam_sets,constraints,loads):
     except(KeyError): 
         length_scaling = 1.
     try: 
-        node_radius = global_args['node_radius']/length_scaling 
+        node_radius = global_args['node_radius']*length_scaling 
     except(KeyError):
-        node_radius=0.
+        node_radius=zeros(shape(nodes)[0])
     filename = global_args['frame3dd_filename']
     n_beams = sum(map(lambda x: shape(x[0])[0], beam_sets))    
     nodes = nodes*length_scaling
@@ -111,12 +131,12 @@ def write_frame3dd_file(nodes,global_args,beam_sets,constraints,loads):
 
         if len(new_nodes)>0:
             nodes = vstack((nodes,asarray(new_nodes)))
+            node_radius = hstack((node_radius,zeros(len(new_nodes))))
             n_beams += shape(new_nodes)[0]
         beams = asarray(new_beams)
         beam_mapping = asarray(beam_mapping)
     else:
         beam_mapping = arange(n_beams).reshape(-1,1)
-
     with open(filename+'.csv', 'wb') as csvfile:
         f = csv.writer(csvfile, delimiter=',')
         def write_row(items):
@@ -129,7 +149,7 @@ def write_frame3dd_file(nodes,global_args,beam_sets,constraints,loads):
         write_row([shape(nodes)[0],"","#number of nodes"])
         write_row([])
         for i,n in enumerate(nodes):
-            write_row([i+1,n[0],n[1],n[2],node_radius]) #node num, x, y, z, r
+            write_row([i+1,n[0],n[1],n[2],node_radius[i]]) #node num, x, y, z, r
         write_row([])
         write_row([shape(constrained_nodes)[0],"","#number of nodes with reactions"])
         write_row([])
@@ -175,7 +195,7 @@ def write_frame3dd_file(nodes,global_args,beam_sets,constraints,loads):
         write_row([])
         write_row([1,"","#whether to include shear deformation"])
         write_row([1,"","#whether to include geometric stiffness"])
-        write_row([50,"","#exagerrate static mesh deformations"])
+        write_row([10,"","#exagerrate static mesh deformations"])
         write_row([2.5,"","#zoom scale for 3d plotting"])
         write_row([1.,"","#x axis increment for internal forces"])
         write_row([])
@@ -201,7 +221,19 @@ def write_frame3dd_file(nodes,global_args,beam_sets,constraints,loads):
 
         write_row([0,"","#number of trapezoidal loads"])
         write_row([0,"","#number of internal concentrated loads"])
-        write_row([0,"","#number of temperature loads"])
+        try:
+            write_row([sum([shape(args['prestresses'])[0]*args['beam_divisions'] for beams,args in beam_sets]),"","#number of temperature loads"])
+            beam_num_os = 0
+            for beams,args in beam_sets:
+                for el in args['prestresses']:
+                    C=1; #proxy for coefficient of thermal expansion
+                    for new_el in beam_mapping[el['element']+beam_num_os]:
+                        cool = -el['value']/(C*args['E']*args['d1']*args['d2'])*length_scaling
+                        write_row([new_el+1,C,args['d1']*length_scaling,args['d2']*length_scaling,cool,cool,cool,cool])
+                beam_num_os += shape(beams)[0]
+        except(KeyError):
+            write_row([0,"","#number of temperature loads"])
+
         write_row([])
 
         write_row([shape(displaced_nodes)[0],"","#number of nodes with prescribed displacements"])
@@ -215,7 +247,7 @@ def write_frame3dd_file(nodes,global_args,beam_sets,constraints,loads):
             write_row([0,"","#0= consistent mass matrix, 1= lumped mass matrix"])
             write_row([.0001,"","#frequency convergence tolerance  approx 1e-4"])
             write_row([0.,"","#frequency shift-factor for rigid body modes, make 0 for pos.def. [K]"])
-            write_row([.05,"","#exaggerate modal mesh deformations"])
+            write_row([.5,"","#exaggerate modal mesh deformations"])
 
             write_row([0,"","#number of nodes with extra node mass or rotary inertia"])
             write_row([0,"","#number of frame elements with extra node mass"])
@@ -223,7 +255,7 @@ def write_frame3dd_file(nodes,global_args,beam_sets,constraints,loads):
             write_row([1,2,3,4,"","#list of modes to be animated, increasing"])
             write_row([1.,"","#pan rate of the animation"])
             write_row([])
-            write_row([0,"# matrix condensation method :0=none, 1=static, 2=Guyan, 3=dynamic"])
+            write_row([1,"# matrix condensation method :0=none, 1=static, 2=Guyan, 3=dynamic"])
         write_row(["#End input"])
 
 def read_frame3dd_results(filename):

@@ -5,6 +5,10 @@ from scipy.spatial import cKDTree
 import networkx as nx
 import itertools
 
+def V3(x,y,z):
+    return asarray([x,y,z])
+def dots(A,V):
+    return inner(A,V).T
 def magnitudes(v):
 	return sqrt(sum(v**2,axis=-1))
 def close(a,b):
@@ -60,7 +64,9 @@ def rotation_matrix(axis, theta):
 RX90=rotation_matrix([1,0,0],pi/2.)
 RY90=rotation_matrix([0,1,0],pi/2.)
 RZ90=rotation_matrix([0,0,1],pi/2.)
-def V3(x,y,z):
-    return asarray([x,y,z])
-def dots(A,V):
-    return inner(A,V).T
+
+
+def line_plane_intersection(P0,N,l,l0=array([0,0,0])):
+    #plane through p0 normal to N, line is l0 + t*l
+    #return distance from l0
+    return dot(P0-l0,N)/dot(l,N)
