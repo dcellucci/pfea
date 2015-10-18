@@ -65,7 +65,6 @@ RX90=rotation_matrix([1,0,0],pi/2.)
 RY90=rotation_matrix([0,1,0],pi/2.)
 RZ90=rotation_matrix([0,0,1],pi/2.)
 
-
 def line_plane_intersection(P0,N,l,l0=array([0,0,0])):
     #plane through p0 normal to N, line is l0 + t*l
     #return distance from l0
