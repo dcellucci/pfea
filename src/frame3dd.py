@@ -4,7 +4,7 @@ from numpy import *
 import csv
 import datetime
 import sys
-from pfea.util import magnitudes
+#from pfeautil import magnitudes
 
 def read_lowest_mode(filename):
     freq = -1
@@ -91,6 +91,8 @@ def write_frame3dd_file(nodes,global_args,beam_sets,constraints,loads):
     #beams is flattened beam_sets
     beams = vstack([beams for beams,args in beam_sets])
     beam_division_array = hstack([args['beam_divisions']*ones(shape(bs)[0],dtype=int) for bs,args in beam_sets])
+    #print(shape(beams)[0])
+    #print(shape(beam_division_array)[0])
     assert(shape(beams)[0]==shape(beam_division_array)[0])
     #subdivide elements
     #add new_nodes after existing nodes
@@ -195,7 +197,7 @@ def write_frame3dd_file(nodes,global_args,beam_sets,constraints,loads):
         write_row([])
         write_row([1,"","#whether to include shear deformation"])
         write_row([1,"","#whether to include geometric stiffness"])
-        write_row([10,"","#exagerrate static mesh deformations"])
+        write_row([1,"","#exagerrate static mesh deformations"])
         write_row([2.5,"","#zoom scale for 3d plotting"])
         write_row([1.,"","#x axis increment for internal forces"])
         write_row([])
@@ -211,13 +213,16 @@ def write_frame3dd_file(nodes,global_args,beam_sets,constraints,loads):
             write_row(["%d"%(ln+1)]+list(full_loads[ln]) )
         write_row([])
 
-        write_row([sum([shape(args['loads'])[0]*args['beam_divisions'] for beams,args in beam_sets]),"","#number of uniformly distributed element loads"])
-        beam_num_os = 0
-        for beams,args in beam_sets:
-            for el in args['loads']:
-                for new_el in beam_mapping[el['element']+beam_num_os]:
-                    write_row([ new_el+1]+list(el['value']/length_scaling)) #force/length needs scaling
-            beam_num_os += shape(beams)[0]
+        try:
+            write_row([sum([shape(args['loads'])[0]*args['beam_divisions'] for beams,args in beam_sets]),"","#number of uniformly distributed element loads"])
+            beam_num_os = 0
+            for beams,args in beam_sets:
+                for el in args['loads']:
+                    for new_el in beam_mapping[el['element']+beam_num_os]:
+                        write_row([ new_el+1]+list(el['value']/length_scaling)) #force/length needs scaling
+                beam_num_os += shape(beams)[0]
+        except(IndexError):
+            write_row([0,"","#number of uniformly distributed element loads"])
 
         write_row([0,"","#number of trapezoidal loads"])
         write_row([0,"","#number of internal concentrated loads"])
@@ -231,8 +236,9 @@ def write_frame3dd_file(nodes,global_args,beam_sets,constraints,loads):
                         cool = -el['value']/(C*args['E']*args['d1']*args['d2'])*length_scaling
                         write_row([new_el+1,C,args['d1']*length_scaling,args['d2']*length_scaling,cool,cool,cool,cool])
                 beam_num_os += shape(beams)[0]
-        except(KeyError):
+        except(KeyError,IndexError):
             write_row([0,"","#number of temperature loads"])
+
 
         write_row([])
 
