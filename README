@@ -8,3 +8,7 @@ A Python port of the [Frame3DD library](frame3dd.sourceforge.net), maintained by
 
 ### Frame3dd.py
 Contains a few hacked utilities for interfacing to the original Frame3DD library. 
+
+
+### NB
+The 'font' is Banner from http://www.network-science.de/ascii/
