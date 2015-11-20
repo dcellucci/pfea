@@ -86,6 +86,7 @@ def write_frame3dd_file(nodes,global_args,beam_sets,constraints,loads):
     displaced_nodes = where(any(full_displacements!=0, axis=1))[0]
     for l in loads:
         full_loads[l['node'],l['DOF']] = l['value']
+
     loaded_nodes = where(any(full_loads!=0, axis=1))[0]
 
     #beams is flattened beam_sets

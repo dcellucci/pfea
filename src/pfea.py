@@ -1,8 +1,20 @@
+#Various attempts at GPU Optimization
+
+#import pycuda.gpuarray as gpuarray
+#import pycuda.autoinit
+#import skcuda.linalg as sklinalg
+
+
+
+
 import numpy as np
 from pfeautil import *
 from math import *
 import scipy as sp
-from time import time
+
+#The sparse solver
+from cvxopt import matrix,sparse,cholmod
+
 
 
 #    #       #     #    #    ####### ######  ### #     # 
@@ -12,8 +24,9 @@ from time import time
 #  #         #     # #######    #    #   #    #    # #   
 #   #        #     # #     #    #    #    #   #   #   #  
 #    #       #     # #     #    #    #     # ### #     # 
-                                                         
 
+# Functions related to the construction of the stiffness matrix K
+                                                        
 def assemble_K(nodes,beam_sets,Q,args):
 	'''
 	# Nodes is all the nodes
@@ -151,15 +164,18 @@ def elastic_K(beam_props):
 	k = atma(t,k)
 
 	# Check and enforce symmetry of the elastic stiffness matrix for the element
+	k = 0.5*(k+k.T)
+	'''
 	for i in range(12):
 		for j in range(i+1,12):
 			if(k[i][j]!=k[j][i]):
 				if(abs(1.0*k[i][j]/k[j][i]-1.0) > 1.0e-6 and (abs(1.0*k[i][j]/k[i][i]) > 1e-6 or abs(1.0*k[j][i]/k[i][i]) > 1e-6)):
 					print("Ke Not Symmetric")
 				k[i][j] = k[j][i] = 0.5 * ( k[i][j] + k[j][i] )
+	'''
 	return k
 
-#GEOMETRIC_K - space frame geometric stiffness matrix, global coordnates 20dec07
+#GEOMETRIC_K - space frame geometric stiffness matrix, global coordnates
 
 def geometric_K(beam_props):
 	# beam_props is a dictionary with the following values
@@ -234,13 +250,8 @@ def geometric_K(beam_props):
 	kg = atma(t,kg)
 
 	# Check and enforce symmetry of the elastic stiffness matrix for the element
-	for i in range(12):
-		for j in range(i+1,12):
-			if(kg[i][j]!=kg[j][i]):
-				if(abs(1.0*kg[i][j]/kg[j][i]-1.0) > 1.0e-6 and (abs(1.0*kg[i][j]/kg[i][i]) > 1e-6 or abs(1.0*kg[j][i]/kg[i][i]) > 1e-6)):
-					print("Not symmetric")
-				kg[i][j] = kg[j][i] = 0.5 * ( kg[i][j] + kg[j][i] )
-
+	kg = 0.5*(kg+kg.T)
+	
 	return kg
 
  #####  ####### #       #     # ####### ######  
@@ -286,14 +297,24 @@ def solve_system(K,nodemap,D,forces,con_dof):
 	# Kqq xq + Kqr xr = fq
 
 	Kqr_xr = np.dot(Kqr,xr)
-	#print(fq)
-	#t0 = time()
-	#xq = sp.linalg.solve(Kqq,fq-Kqr_xr)
-	tC = sp.linalg.cho_factor(Kqq)
-	xq = sp.linalg.cho_solve(tC,fq-Kqr_xr)
-	#t1 = time()
-	#print("Solve Takes: {0}".format(t1-t0))
+	
+	try:
+		# Scipy solver- good for dense matrices (small DoF)
+		#tC = sp.linalg.cho_factor(Kqq)
+		#xq = sp.linalg.cho_solve(tC,fq-Kqr_xr)
 
+		# Sparse Solver- using the CVXOPT cholesky solver 
+		spKqq = sparse(matrix(Kqq))
+		b = matrix(fq-Kqr_xr)
+		cholmod.linsolve(spKqq,b)
+		xq = np.array(b).T[0]
+
+	except:
+		print("Warning: Cholesky did not work")
+		#If Cholesky dies (perhaps the matrix is not pos-def and symmetric)
+		#We switch over to the sad scipy solver. very slow.
+		xq = sp.linalg.solve(Kqq,fq-Kqr_xr)
+	
 	Krq_xq = np.dot(Krq,xq)
 	Krr_xr = np.dot(Krr,xr)
 
@@ -324,12 +345,20 @@ def solve_system(K,nodemap,D,forces,con_dof):
 #       ####### #     #  #####  #######  #####  
                                                 
 
-def assemble_loads(loads,tot_dof,length_scaling):
-	#creates force vector b
+def assemble_loads(loads,constraints,tot_dof,length_scaling):
+	# creates force vector b
+	# Nodal Loads
+	# virtual loads from prescribed displacements
 	forces = np.zeros(tot_dof)
+	dP = np.zeros(tot_dof)
+
 	for load in loads:
 		forces[6*load['node']+load['DOF']] = load['value']
-	return forces
+
+	for constraint in constraints:
+		dP[6*constraint['node']+constraint['DOF']] = constraint['value']*length_scaling
+
+	return forces,dP
 
 def element_end_forces(nodes,Q,beam_sets,D):
 
@@ -440,25 +469,30 @@ def frame_element_force(s,beam_props):
 
 	axial_strain = del1 / Le
 
-
+	#Axial force component
 	s[0]  =  -(Ax*E/Le)*del1
 	
 	T = -s[0]
 	#if geom:
-	#	T = -s[1]
+	#T = -s[1]
 
+	#Shear forces
+	# positive Vy in local y direction
 	s[1]  = -1.0*del2*(12.*E*Iz/(Le*Le*Le*(1.+Ksy)) + T/L*(1.2+2.0*Ksy+Ksy*Ksy)/Dsy) + \
 		         del6*( 6.*E*Iz/(Le*Le*(1.+Ksy)) + T/10.0/Dsy)
-	
+	# positive Vz in local z direction
 	s[2]  = -1.0*del3*(12.*E*Iy/(Le*Le*Le*(1.+Ksz)) + T/L*(1.2+2.0*Ksz+Ksz*Ksz)/Dsz) - \
 		         del5*( 6.*E*Iy/(Le*Le*(1.+Ksz)) + T/10.0/Dsz) 
-	
+	#Torsion Forces
+	# positive Tx r.h.r. about local x axis
 	s[3]  = -1.0*del7*(G*J/Le)
 
+	#Bending Forces
+	#positive My -> positive x-z curvature
 	s[4]  =  1.0*del3*( 6.*E*Iy/(Le*Le*(1.+Ksz)) + T/10.0/Dsz) + \
 		         del11*((4.+Ksz)*E*Iy/(Le*(1.+Ksz)) + T*L*(2.0/15.0+Ksz/6.0+Ksz*Ksz/12.0)/Dsz ) + \
 		         del14*((2.-Ksz)*E*Iy/(Le*(1.+Ksz)) - T*L*(1.0/30.0+Ksz/6.0+Ksz*Ksz/12.0)/Dsz )
-
+	#positive Mz -> positive x-y curvature	         
 	s[5]  = -1.0*del2*( 6.*E*Iz/(Le*Le*(1.+Ksy)) + T/10.0/Dsy) + \
 			     del12*((4.+Ksy)*E*Iz/(Le*(1.+Ksy)) + T*L*(2.0/15.0+Ksy/6.0+Ksy*Ksy/12.0)/Dsy ) + \
 				 del15*((2.-Ksy)*E*Iz/(Le*(1.+Ksy)) - T*L*(1.0/30.0+Ksy/6.0+Ksy*Ksy/12.0)/Dsy ) 
@@ -503,7 +537,10 @@ def equilibrium_error(K,nodemap,F,D,tot_dof,con_dof):
 		swap_Vector_Vals(dF,nmap[0],nmap[1])
 		swap_Vector_Vals(D,nmap[0],nmap[1])
 
-	return dF,np.linalg.norm(dF)/np.linalg.norm(Fq)
+	norm = np.linalg.norm(Fq)
+	#if norm==0:
+	#	norm = 1
+	return dF,np.linalg.norm(dF)/norm
 
 
 
@@ -694,8 +731,8 @@ def analyze_System(nodes, global_args, beam_sets, constraints,loads):
 	#Part 4
 	#Calculate the node displacements due to mechanical loads
 	#as well as prescribed node displacements
-	F = assemble_loads(loads,tot_dof,length_scaling)
-	dD = np.zeros(tot_dof)
+	F,dP = assemble_loads(loads,constraints,tot_dof,length_scaling)
+	dD = dP
 	C  = np.zeros(tot_dof)
 
 	dD,C = solve_system(K,node_map,dD,F,con_dof)
@@ -704,17 +741,20 @@ def analyze_System(nodes, global_args, beam_sets, constraints,loads):
 	#Add together displacements due to temperature and
 	#mechanical, as well as forces
 	D = D + dD
-
+	
 	#Part 6
 	element_end_forces(nodes,Q, beam_sets, D)
-	dF,error = equilibrium_error(K,node_map,F,D,tot_dof,con_dof)
 
+	error = 1.0
+	
+	dF,error = equilibrium_error(K,node_map,F,D,tot_dof,con_dof)
+	if error==inf:
+		error = 0.0
+		print("Something's wrong: did you remember to set loads? Skipping Quasi-Newton")
+	
 	#Part 7
 	#Quasi newton-raphson
-	
-	error = 1.0
 	it = 0
-	
 	while error > 1.0e-9 and it < 10:
 		it = it + 1
 		
@@ -738,7 +778,7 @@ def analyze_System(nodes, global_args, beam_sets, constraints,loads):
 		fin_node_disp[n:,] = np.array([D[n*6],D[n*6+1],D[n*6+2]])	
 	
 
-	return fin_node_disp
+	return fin_node_disp,C,Q
 
 
 

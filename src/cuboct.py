@@ -126,7 +126,31 @@ def remove_frame(loc,node_frame_map,frames):
 	c_frame = np.copy(np.array(frames))
 	for i,frame in enumerate(frames):
 		if frame[0] == id1 and frame[1] == id2:
-			print("Frame found")
 			c_frame = np.delete(c_frame,i,0)
 
 	return c_frame
+
+def remove_node(loc, node_frame_map,frames,nodes):
+	# loc is a list containing a the x,y,z location of the voxel
+	# and the index of the desired node to remove.
+	# removes the node, and all nodes connected to the node.
+	nid = int(node_frame_map[loc[0]][loc[1]][loc[2]][loc[3]])
+	remove_index = []
+
+	for i,frame in enumerate(frames):
+		if nid in frame:
+			remove_index.append(i)
+		if frame[0] > nid:
+			frame[0] = frame[0]-1
+		if frame[1] > nid:
+			frame[1] = frame[1]-1
+
+	for i,row in enumerate(node_frame_map):
+		for j,col in enumerate(node_frame_map):
+			for k,dep in enumerate(node_frame_map):
+				for l,item in enumerate(node_frame_map):
+					if(node_frame_map[i][j][k][l] > nid):
+						node_frame_map[i][j][k][l] = node_frame_map[i][j][k][l]-1
+	print(remove_index)
+	return np.delete(frames,remove_index,0), np.delete(nodes,nid,0),node_frame_map
+

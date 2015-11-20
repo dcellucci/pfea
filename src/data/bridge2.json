@@ -1,0 +1,851 @@
+{
+	"assembly": {
+		"cellsMin": {
+			"x": -2,
+			"y": -1,
+			"z": 0
+		},
+		"cellsMax": {
+			"x": 0,
+			"y": 16,
+			"z": 5
+		},
+		"numCells": 165,
+		"units": "mm",
+		"scale": 1,
+		"cellType": "truncatedCube",
+		"connectionType": "face",
+		"latticeType": "default",
+		"partType": null,
+		"aspectRatio": {
+			"x": 1.4142135623730951,
+			"y": 1.4142135623730951,
+			"z": 1.4142135623730951
+		},
+		"denseCellsMin": null,
+		"overlapDetected": false,
+		"sparseCells": [
+			[
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null
+				],
+				[
+					null,
+					{
+						"materialName": "brass"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null
+				],
+				[
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					{
+						"materialName": "brass"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					{
+						"materialName": "brass"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					{
+						"materialName": "brass"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null,
+					null
+				]
+			],
+			[
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null
+				],
+				[
+					null,
+					{
+						"materialName": "brass"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null
+				],
+				[
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					{
+						"materialName": "brass"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					{
+						"materialName": "brass"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					{
+						"materialName": "brass"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null,
+					null
+				]
+			],
+			[
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null
+				],
+				[
+					null,
+					{
+						"materialName": "brass"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null
+				],
+				[
+					null,
+					null,
+					{
+						"materialName": "brass"
+					},
+					{
+						"materialName": "brass"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					{
+						"materialName": "brass"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					null,
+					{
+						"materialName": "brass"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					null,
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					}
+				],
+				[
+					null,
+					{
+						"materialName": "brass"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null,
+					null
+				],
+				[
+					{
+						"materialName": "rigid"
+					},
+					{
+						"materialName": "rigid"
+					},
+					null,
+					null,
+					null,
+					null
+				]
+			]
+		]
+	},
+	"materials": {
+		"deleteMaterial": {
+			"color": "#ff0000",
+			"noDelete": true
+		},
+		"brass": {
+			"name": "Brass",
+			"color": "#b5a642",
+			"altColor": "#857B64",
+			"properties": {
+				"conductive": true
+			},
+			"noDelete": true
+		},
+		"fiberGlass": {
+			"name": "Fiberglass",
+			"color": "#fef1b5",
+			"altColor": "#ecf0f1",
+			"properties": {},
+			"noDelete": true
+		},
+		"carbon": {
+			"name": "Carbon Composite",
+			"color": "#222",
+			"altColor": "#000",
+			"properties": {},
+			"noDelete": true
+		},
+		"nType": {
+			"name": "Silicon N-Type",
+			"color": "#bcc6cc",
+			"altColor": "#8391AC",
+			"properties": {},
+			"noDelete": true
+		},
+		"nTypePlus": {
+			"name": "Silicon Heavily Doped N-Type (N+)",
+			"color": "#c6ccbc",
+			"altColor": "#9CC9CB",
+			"properties": {},
+			"noDelete": true
+		},
+		"pType": {
+			"name": "Silicon P-Type",
+			"color": "#ccbcc6",
+			"altColor": "#F5447B",
+			"properties": {},
+			"noDelete": true
+		},
+		"pTypePlus": {
+			"name": "Silicon Heavily Doped P-Type (P+)",
+			"color": "#ccc2bc",
+			"altColor": "#F99987",
+			"properties": {},
+			"noDelete": true
+		},
+		"rigid": {
+			"name": "Rigid",
+			"color": "#aaa",
+			"altColor": "#666",
+			"properties": {},
+			"noDelete": true
+		},
+		"flexure": {
+			"name": "Flexure",
+			"color": "#aaa",
+			"altColor": "#8391AC",
+			"properties": {},
+			"noDelete": true
+		}
+	}
+}
