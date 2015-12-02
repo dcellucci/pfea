@@ -49,7 +49,8 @@ frame_props = {"nu"  : 0.3, #poisson's ratio
 			   "beam_divisions" : 0,
 			   "cross_section"  : 'circular',
 			   "roll": 0,
-			   "Le":vox_pitch/sqrt(2.0)} 
+			   "Le":vox_pitch/sqrt(2.0),
+			   "node_mass":0.01615} 
 
 #Node Map Population
 #Referencing the geometry-specific cuboct.py file. 
@@ -85,17 +86,17 @@ meanloc = np.array([np.mean(nodes.T[0]),np.mean(nodes.T[1])])
 #Constraints are added based on simple requirements right now
 for i,node in enumerate(newnodes):
 	if node[2] < 0.05:
-		if np.linalg.norm(meanloc-node[0:2])-1.27 < 0.01:
-			vec = -0.001*(meanloc-node[0:2])/np.linalg.norm(meanloc-node[0:2])
-			constraints.append({'node':i,'DOF':2, 'value':0})
-			constraints.append({'node':i,'DOF':0, 'value':vec[0]})
-			constraints.append({'node':i,'DOF':1, 'value':vec[1]})
+		#if np.linalg.norm(meanloc-node[0:2])-1.27 < 0.01:
+			#vec = -0.001*(meanloc-node[0:2])/np.linalg.norm(meanloc-node[0:2])
+		constraints.append({'node':i,'DOF':2, 'value':0})
+		constraints.append({'node':i,'DOF':0, 'value':0})
+		constraints.append({'node':i,'DOF':1, 'value':0})
 		#print(np.linalg.norm(meanloc-node[0:2]))
 		#constraints.append({'node':i,'DOF':3, 'value':0})
 		#constraints.append({'node':i,'DOF':4, 'value':0})
 		#constraints.append({'node':i,'DOF':5, 'value':0})
-	if np.abs(node[2]-maxval) < 0.05:
-		loads.append({'node':i,'DOF':2, 'value':-0.1})
+	#if np.abs(node[2]-maxval) < 0.05:
+	#	loads.append({'node':i,'DOF':2, 'value':-0.1})
 
  #####  ### #     #    ####### #     # ####### ######  #     # ####### 
 #     #  #  ##   ##    #     # #     #    #    #     # #     #    #    
@@ -118,13 +119,18 @@ out_frames = [(np.array(frames),{'E'   : frame_props["E"],
 								 'roll': frame_props["roll"],
 								 'loads':{'element':0},
 								 'prestresses':{'element':0},
-								 'Le': frame_props["Le"]})]
+								 'Le': frame_props["Le"],
+								 'node_mass':frame_props["node_mass"]})]
 
 #Format node positions
 out_nodes = np.array(newnodes)
 
 #Global Arguments 
-global_args = {'frame3dd_filename': "hut1_s{0}_mt".format(subdiv), 'length_scaling':1,"using_Frame3dd":False,"debug_plot":True}
+global_args = {'frame3dd_filename': "hut1_s{0}_mt".format(subdiv), 
+			   'length_scaling':1,
+			   'using_Frame3dd':False,
+			   'debug_plot':True,
+			   'gravity':(0,0,-9.81)}
 
 if global_args["using_Frame3dd"]:
 	frame3dd.write_frame3dd_file(out_nodes, global_args, out_frames, constraints,loads)
@@ -180,7 +186,7 @@ if global_args["debug_plot"]:
 	plt.axis('equal')
 	#ax.set_aspect('equal')
 	frame_coords = []
-	factor = 1000
+	factor = 25
 	for i,node in enumerate(nodes):
 		xs.append(node[0])
 		ys.append(node[1])
