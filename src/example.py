@@ -59,7 +59,7 @@ mat_matrix = [[[0,0,0],
 			  [[0,0,0],
 			   [0,0,0],
 			   [0,0,0]]]
-subdiv = 3
+subdiv = 8
 #Subdivide the material matrix
 dims = np.shape(mat_matrix)
 new_mat_matrix = np.zeros(((dims[0]-2)*subdiv+2,(dims[1]-2)*subdiv+2,(dims[2]-2)*subdiv+2))
