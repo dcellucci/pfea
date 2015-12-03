@@ -6,7 +6,7 @@ import frame3dd
 import subprocess
 import pfea
 import cProfile
-import cuboct
+import dschwarz
 from math import *
 
 
@@ -59,7 +59,7 @@ mat_matrix = [[[0,0,0],
 			  [[0,0,0],
 			   [0,0,0],
 			   [0,0,0]]]
-subdiv = 8
+subdiv = 2
 #Subdivide the material matrix
 dims = np.shape(mat_matrix)
 new_mat_matrix = np.zeros(((dims[0]-2)*subdiv+2,(dims[1]-2)*subdiv+2,(dims[2]-2)*subdiv+2))
@@ -101,7 +101,7 @@ frame_props = {"nu"  : 0.33, #poisson's ratio
 			   "beam_divisions" : 0,
 			   "cross_section"  : 'rectangular',
 			   "roll": 0,
-			   "Le":1.0*vox_pitch/sqrt(2.0)} 
+			   "Le":0.56*vox_pitch}#1.0*vox_pitch/sqrt(2.0)} 
 '''
 frame_props = {"nu"  : 0.33, #poisson's ratio
 			   "d1"	 : 0.000564/subdiv, #m
@@ -121,9 +121,9 @@ frame_props = {"nu"  : 0.33, #poisson's ratio
 
 node_frame_map = np.zeros((subdiv,subdiv,subdiv,6))
 print(node_frame_map.shape)
-nodes,frames,node_frame_map = cuboct.from_material(mat_matrix,vox_pitch)
+nodes,frames,node_frame_map = dschwarz.from_material(mat_matrix,vox_pitch)
 
-strain = 0.025
+strain = 0.0001
 strain_disp = subdiv*vox_pitch*strain
 #Constraint and load population
 constraints = []
@@ -133,9 +133,12 @@ for x in range(1,subdiv+1):
 	for y in range(1,subdiv+1):
 		#The bottom-most nodes are constrained to neither translate nor
 		#rotate
-		constraints.append({'node':node_frame_map[x][y][1][2],'DOF':0, 'value':0})
-		constraints.append({'node':node_frame_map[x][y][1][2],'DOF':1, 'value':0})
-		constraints.append({'node':node_frame_map[x][y][1][2],'DOF':2, 'value':0})
+		constraints.append({'node':node_frame_map[x][y][1][0],'DOF':0, 'value':0})
+		constraints.append({'node':node_frame_map[x][y][1][0],'DOF':1, 'value':0})
+		constraints.append({'node':node_frame_map[x][y][1][0],'DOF':2, 'value':0})		
+		constraints.append({'node':node_frame_map[x][y][1][3],'DOF':0, 'value':0})
+		constraints.append({'node':node_frame_map[x][y][1][3],'DOF':1, 'value':0})
+		constraints.append({'node':node_frame_map[x][y][1][3],'DOF':2, 'value':0})
 		#constraints.append({'node':node_frame_map[x][y][1][2],'DOF':3, 'value':0})
 		#constraints.append({'node':node_frame_map[x][y][1][2],'DOF':4, 'value':0})
 		#constraints.append({'node':node_frame_map[x][y][1][2],'DOF':5, 'value':0})
@@ -143,9 +146,12 @@ for x in range(1,subdiv+1):
 		#The top most nodes are assigned a z-axis load, as well as being
 		#constrained to translate in only the z-direction.
 		#loads.append(      {'node':node_frame_map[x][y][size_z][5],'DOF':2, 'value':-5.0})
-		constraints.append({'node':node_frame_map[x][y][subdiv][5],'DOF':0, 'value':0})
-		constraints.append({'node':node_frame_map[x][y][subdiv][5],'DOF':1, 'value':0})
-		constraints.append({'node':node_frame_map[x][y][subdiv][5],'DOF':2, 'value':-strain_disp})
+		constraints.append({'node':node_frame_map[x][y][subdiv][1],'DOF':0, 'value':0})
+		constraints.append({'node':node_frame_map[x][y][subdiv][1],'DOF':1, 'value':0})
+		constraints.append({'node':node_frame_map[x][y][subdiv][1],'DOF':2, 'value':-strain_disp})
+		constraints.append({'node':node_frame_map[x][y][subdiv][2],'DOF':0, 'value':0})
+		constraints.append({'node':node_frame_map[x][y][subdiv][2],'DOF':1, 'value':0})
+		constraints.append({'node':node_frame_map[x][y][subdiv][2],'DOF':2, 'value':-strain_disp})
 		#constraints.append({'node':node_frame_map[x][y][subdiv][5],'DOF':3, 'value':0})
 		#constraints.append({'node':node_frame_map[x][y][subdiv][5],'DOF':4, 'value':0})
 		#constraints.append({'node':node_frame_map[x][y][subdiv][5],'DOF':5, 'value':0})
@@ -184,7 +190,7 @@ out_frames = [(np.array(frames),{'E'   : frame_props["E"],
 out_nodes = np.array(nodes)
 
 #Global Arguments 
-global_args = {'frame3dd_filename': "test", 'length_scaling':1,"using_Frame3dd":False,"debug_plot":False}
+global_args = {'frame3dd_filename': "test", 'length_scaling':1,"using_Frame3dd":False,"debug_plot":True, "gravity" : [0,0,0]}
 
 if global_args["using_Frame3dd"]:
 	frame3dd.write_frame3dd_file(out_nodes, global_args, out_frames, constraints,loads)
@@ -202,6 +208,7 @@ for constraint in constraints:
 		tot_force = tot_force + C[constraint["node"]*6+constraint["DOF"]]
 print(tot_force/(subdiv*subdiv*vox_pitch*vox_pitch)/strain)
 
+
 if global_args["debug_plot"]:
 	### Right now the debug plot only does x-y-z displacements, no twisting
 	xs = []
@@ -216,15 +223,16 @@ if global_args["debug_plot"]:
 	ax = fig.add_subplot(111, projection='3d')
 	ax.set_aspect('equal')
 	frame_coords = []
+	factor = 1000
 
 	print(matplotlib.projections.get_projection_names())
 	for i,node in enumerate(nodes):
 		xs.append(node[0])
 		ys.append(node[1])
 		zs.append(node[2])
-		rxs.append(node[0]+res_displace[i][0]*10)
-		rys.append(node[1]+res_displace[i][1]*10)
-		rzs.append(node[2]+res_displace[i][2]*10)
+		rxs.append(node[0]+res_displace[i][0]*factor)
+		rys.append(node[1]+res_displace[i][1]*factor)
+		rzs.append(node[2]+res_displace[i][2]*factor)
 
 	frame_args = out_frames[0][1]
 	st_nrg = 0.5*frame_args["Le"]/frame_args["E"]*(Q.T[0]**2/frame_args["Ax"]+Q.T[4]**2/frame_args["Iy"]+Q.T[5]**2/frame_args["Iz"])
@@ -238,8 +246,8 @@ if global_args["debug_plot"]:
 		rstart = [rxs[nid1],rys[nid1],rzs[nid1]]
 		rend   = [rxs[nid2],rys[nid2],rzs[nid2]]
 
-		#ax.plot([start[0],end[0]],[start[1],end[1]],[start[2],end[2]],color='r', alpha=0.1)
-		ax.plot([rstart[0],rend[0]],[rstart[1],rend[1]],[rstart[2],rend[2]],color='b', alpha=(1.0*st_nrg[i]/qmax)**2)
+		ax.plot([start[0],end[0]],[start[1],end[1]],[start[2],end[2]],color='r', alpha=0.1)
+		ax.plot([rstart[0],rend[0]],[rstart[1],rend[1]],[rstart[2],rend[2]],color='b', alpha=0.5)#(1.0*st_nrg[i]/qmax)**2)
 	'''
 	for dframe in dframes:
 		nid1 = int(dframe[0])
@@ -250,6 +258,6 @@ if global_args["debug_plot"]:
 	'''	
 
 	#ax.scatter(xs,ys,zs, color='r',alpha=0.1)
-	#ax.scatter(rxs,rys,rzs, color='b',alpha=0.3)
+	ax.scatter(rxs,rys,rzs, color='b',alpha=0.3)
 	plt.show()
 	#print(frames)
