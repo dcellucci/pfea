@@ -300,14 +300,14 @@ def solve_system(K,nodemap,D,forces,con_dof):
 	
 	try:
 		# Scipy solver- good for dense matrices (small DoF)
-		#tC = sp.linalg.cho_factor(Kqq)
-		#xq = sp.linalg.cho_solve(tC,fq-Kqr_xr)
+		tC = sp.linalg.cho_factor(Kqq)
+		xq = sp.linalg.cho_solve(tC,fq-Kqr_xr)
 
 		# Sparse Solver- using the CVXOPT cholesky solver 
-		spKqq = sparse(matrix(Kqq))
-		b = matrix(fq-Kqr_xr)
-		cholmod.linsolve(spKqq,b)
-		xq = np.array(b).T[0]
+		#spKqq = sparse(matrix(Kqq))
+		#b = matrix(fq-Kqr_xr)
+		#cholmod.linsolve(spKqq,b)
+		#xq = np.array(b).T[0]
 
 	except:
 		print("Warning: Cholesky did not work")

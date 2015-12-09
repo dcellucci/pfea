@@ -5,15 +5,15 @@ import numpy as np
 
 #The location of nodes within a cubic unit cell
 #Units are relative to the voxel pitch
-
-uc_dims = [1.0,1.0,1.0]
+uc_dims = np.array([1.0,1.0,1.0])
 
 node_locs = [[0.0,0.5,0.5],
-			 [0.5,0.0,0.5],  
+			 [0.5,0.0,0.5],
 			 [0.5,0.5,0.0],
-			 [1.0,0.5,0.5],
+			 [0.5,0.5,0.5],
+			 [0.5,0.5,1.0],
 			 [0.5,1.0,0.5],
-			 [0.5,0.5,1.0]]
+			 [1.0,0.5,0.5]]  
 
 #References Node_locs, maps frame number to
 #indices in node_locs corresponding to end-points
@@ -22,18 +22,13 @@ node_locs = [[0.0,0.5,0.5],
 #see http://svn.code.sourceforge.net/p/frame3dd/code/trunk/doc/Frame3DD-manual.html
 #Section 7.3
 
-frame_locs = [[0,1],
-			  [0,2],
-			  [0,5],
-			  [0,4],
-			  [1,2],
-			  [1,5],
+frame_locs = [[0,3],
 			  [1,3],
-			  [2,4],
 			  [2,3],
-			  [5,3],
-			  [5,4],
-			  [4,3]]
+			  [3,4],
+			  [3,5],
+			  [3,6]]
+
 
 #TODO
 #Replace node, and frame lists with numpy arrays
@@ -42,7 +37,7 @@ def from_material(mat_matrix,vox_pitch):
 	size_x = len(mat_matrix)
 	size_y = len(mat_matrix[0])
 	size_z = len(mat_matrix[0][0])
-	node_frame_map = np.zeros((size_x,size_y,size_z,6))
+	node_frame_map = np.zeros((size_x,size_y,size_z,len(node_locs)))
 
 	mat_dims = (np.array([size_x,size_y,size_z])-2)*uc_dims*vox_pitch
 
@@ -71,7 +66,7 @@ def from_material(mat_matrix,vox_pitch):
 	for i in range(1,size_x-1):
 		for j in range(1,size_y-1):
 			for k in range(1,size_z-1):
-				node_ids = [0]*6
+				node_ids = [0]*len(node_locs)
 				if(mat_matrix[i][j][k] == 1):
 					if(mat_matrix[i-1][j][k] == 0):
 						nodes.append([(i+node_locs[0][0]-1)*vox_pitch,
@@ -80,7 +75,7 @@ def from_material(mat_matrix,vox_pitch):
 						node_ids[0] = cur_node_id
 						cur_node_id = cur_node_id+1
 					else:
-						node_ids[0] = node_frame_map[i-1][j][k][3]
+						node_ids[0] = node_frame_map[i-1][j][k][6]
 
 					if(mat_matrix[i][j-1][k] == 0):
 						nodes.append([(i+node_locs[1][0]-1)*vox_pitch,
@@ -89,7 +84,7 @@ def from_material(mat_matrix,vox_pitch):
 						node_ids[1] = cur_node_id
 						cur_node_id = cur_node_id+1
 					else:
-						node_ids[1] = node_frame_map[i][j-1][k][4]
+						node_ids[1] = node_frame_map[i][j-1][k][5]
 
 					if(mat_matrix[i][j][k-1] == 0):
 						nodes.append([(i+node_locs[2][0]-1)*vox_pitch,
@@ -98,22 +93,22 @@ def from_material(mat_matrix,vox_pitch):
 						node_ids[2] = cur_node_id
 						cur_node_id = cur_node_id+1
 					else:
-						node_ids[2] = node_frame_map[i][j][k-1][5]
+						node_ids[2] = node_frame_map[i][j][k-1][4]
 
-					for q in range(3,6):
+					for q in range(3,len(node_locs)):
 						nodes.append([(i+node_locs[q][0]-1)*vox_pitch,
 									  (j+node_locs[q][1]-1)*vox_pitch, 
 									  (k+node_locs[q][2]-1)*vox_pitch])
 						node_ids[q] = cur_node_id
 						cur_node_id = cur_node_id+1
 					
-					node_frame_map[i][j][k][0:6] = node_ids
+					node_frame_map[i][j][k][0:len(node_locs)] = node_ids
 
 					### Frame Population
 					#Once The node IDs for a voxel have been found, we populate
 					#A list with the frame elements that compose the octahedron
 					#contained within a voxel
-					for q in range(0,12):
+					for q in range(0,len(frame_locs)):
 						frames.append([node_ids[frame_locs[q][0]],
 									   node_ids[frame_locs[q][1]]])
 					#Constraints are added based on simple requirements right now
@@ -122,7 +117,13 @@ def from_material(mat_matrix,vox_pitch):
 	return nodes,frames,node_frame_map,mat_dims
 
 def frame_length(vox_pitch):
-	return 1.0*vox_pitch/np.sqrt(2.0)
+	return 0.5*vox_pitch
+
+def frame_length(vox_pitch):
+	return 0.56*vox_pitch
+
+def alt_frame_length(vox_pitch):
+	return 0.5*vox_pitch
 
 def remove_frame(loc,node_frame_map,frames):
 	# loc is a list containing a (1,3) tuple with the x,y,z location of the voxel

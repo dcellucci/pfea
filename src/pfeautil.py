@@ -80,6 +80,7 @@ def coord_trans(x_n1,x_n2,L,p):
     # x_n2  : x,y,z position of the second node n2
     # L     : length of beam (without accounting for node radius)
     # p     : the roll angle in radians
+    L = np.linalg.norm(x_n1-x_n2)
     Cx = (x_n2[0]-x_n1[0])/L
     Cy = (x_n2[1]-x_n1[1])/L
     Cz = (x_n2[2]-x_n1[2])/L
