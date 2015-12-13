@@ -3,8 +3,10 @@ from __future__ import division
 from numpy import *
 import numpy as np
 from scipy.spatial import cKDTree
+from scipy.sparse import csr_matrix
 import networkx as nx
 import itertools
+import cvxopt as co
 
 '''
 def V3(x,y,z):
@@ -116,82 +118,65 @@ def coord_trans(x_n1,x_n2,L,p):
     return t
 
 def atma(t,m):
-    a = np.zeros((12,12))
-    ma = np.zeros((12,12)) 
+    a = co.matrix(0.0,(12,12))
 
     #More efficient assignment possible
     for i in range(0,4):
-        a[3*i][3*i] = t[0];
-        a[3*i][3*i+1] = t[1];
-        a[3*i][3*i+2] = t[2];
-        a[3*i+1][3*i] = t[3];
-        a[3*i+1][3*i+1] = t[4];
-        a[3*i+1][3*i+2] = t[5];
-        a[3*i+2][3*i] = t[6];
-        a[3*i+2][3*i+1] = t[7];
-        a[3*i+2][3*i+2] = t[8];
+        a[3*i,3*i] = t[0];
+        a[3*i,3*i+1] = t[1];
+        a[3*i,3*i+2] = t[2];
+        a[3*i+1,3*i] = t[3];
+        a[3*i+1,3*i+1] = t[4];
+        a[3*i+1,3*i+2] = t[5];
+        a[3*i+2,3*i] = t[6];
+        a[3*i+2,3*i+1] = t[7];
+        a[3*i+2,3*i+2] = t[8];
     
-    m = np.dot(np.dot(np.transpose(a),m),a)
-    '''
-    for j in range(0,12):
-        for i in range(0,12):
-            for k in range(0,12):
-                ma[i][j] = ma[i][j] + m[i][k] * a[k][j]
+    m = co.matrix(np.dot(np.dot(a.T,m),a))
 
-    m = np.zeros((12, 12))
-
-    for j in range(0,12):
-        for i in range(0,12):
-            for k in range(0,12):
-                m[i][j] = m[i][j] + ma[k][j] * a[k][i]
-    '''
     return m
 
 def swap_Matrix_Rows(M,r1,r2):
-    temp = np.copy(M[r1,:])
-    M[r1,:] = M[r2,:]
-    M[r2,:] = temp
-
+    r1 = int(r1)
+    r2 = int(r2)
+    M[[r1,r2],:] = M[[r2,r1],:]
+    
 def swap_Matrix_Cols(M,c1,c2):
-    temp = np.copy(M[:,c1])
-    M[:,c1] = M[:,c2]
-    M[:,c2] = temp
-
+    c1 = int(c1)
+    c2 = int(c2)
+    M[:,[c1,c2]] = M[:,[c2,c1]]
+    
 def swap_Vector_Vals(V,i1,i2):
-    temp = np.copy(V[i1])
-    V[i1] = V[i2]
-    V[i2] = temp
+    V[[i1,i2]] = V[[i2,i1]]
 
 def gen_Node_map(nodes,constraints):
     # we want to generate the map between the input K 
     # and the easily-solved K
     ndof = len(nodes)*6
+    index = ndof-len(constraints)
+    
+    indptr = np.array(range(ndof))
+    data = np.array([1.0]*ndof)
+    row = np.array(range(ndof))
+    col = np.array(range(ndof))
+    
     cdof_list = []
+    
     for constraint in constraints:
         cdof_list.append(constraint["node"]*6+constraint["DOF"])
-    cdof_map = []
-    index = ndof-len(constraints)
+        
     for c_id in cdof_list:
-        if c_id > ndof-len(constraints)-1:
-            cdof_map.append((c_id,c_id))
-        else:
+        if c_id < ndof-len(constraints):
             not_found = True
             while not_found:
                 if index in cdof_list:
                     index = index+1
                 else:
-                    cdof_map.append((c_id,index))
+                    col[c_id] = index
+                    col[index] = c_id
                     not_found = False
                     index=index+1
 
-    D = np.zeros(ndof)
-    '''
-    for i,node in enumerate(nodes):
-        D[i*6] = node[0]
-        D[i*6+1] = node[1]
-        D[i*6+2] = node[2]
-    '''
-    #print(cdof_map)
-    #print(D)
-    return D,cdof_map 
+
+    return co.spmatrix(data,row,col) 
 

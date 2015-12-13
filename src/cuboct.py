@@ -119,7 +119,7 @@ def from_material(mat_matrix,vox_pitch):
 					#Constraints are added based on simple requirements right now
 					#The bottom-most nodes are constrained to neither translate nor
 					#rotate
-	return nodes,frames,node_frame_map,mat_dims
+	return nodes,frames,node_frame_map,uc_dims
 
 def frame_length(vox_pitch):
 	return 1.0*vox_pitch/np.sqrt(2.0)

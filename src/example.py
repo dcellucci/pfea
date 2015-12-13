@@ -7,6 +7,8 @@ import subprocess
 import pfea
 import cProfile
 import dschwarz
+import cuboct
+import kelvin
 from math import *
 
 
@@ -50,164 +52,169 @@ for i in range(0,size_x+2):
 		tempcol.append(tempdep)
 	mat_matrix.append(tempcol)
 '''
-mat_matrix = [[[0,0,0],
-			   [0,0,0],
-			   [0,0,0]],
-			  [[0,0,0],
-			   [0,1,0],
-			   [0,0,0]],
-			  [[0,0,0],
-			   [0,0,0],
-			   [0,0,0]]]
-subdiv = 2
-#Subdivide the material matrix
-dims = np.shape(mat_matrix)
-new_mat_matrix = np.zeros(((dims[0]-2)*subdiv+2,(dims[1]-2)*subdiv+2,(dims[2]-2)*subdiv+2))
+vals = []
+for subdiv in range(2,10,2):
+	zheightvals = []
+	for aspratio in range(1,2):
+		mat_matrix = [[[0,0,0],
+					   [0,0,0],
+					   [0,0,0]],
+					  [[0,0,0],
+					   [0,1,0],
+					   [0,0,0]],
+					  [[0,0,0],
+					   [0,0,0],
+					   [0,0,0]]]
+		zheight =int(aspratio*subdiv)
+		#Subdivide the material matrix
+		if subdiv > 1:
+			dims = np.shape(mat_matrix)
+			new_mat_matrix = np.zeros(((dims[0]-2)*subdiv+2,(dims[1]-2)*subdiv+2,(dims[2]-2)*zheight+2))
 
-for i in range(1,dims[0]-1):
-	for j in range(1,dims[1]-1):
-		for k in range(1,dims[2]-1):
-			if mat_matrix[i][j][k] == 1:
-				dex = ((i-1)*subdiv+1,(j-1)*subdiv+1,(k-1)*subdiv+1)
-				for l in range(0,subdiv):
-					for m in range(0,subdiv):
-						for n in range(0,subdiv):
-							new_mat_matrix[l+dex[0]][m+dex[1]][n+dex[2]] = 1
+			for i in range(1,dims[0]-1):
+				for j in range(1,dims[1]-1):
+					for k in range(1,dims[2]-1):
+						if mat_matrix[i][j][k] == 1:
+							dex = ((i-1)*subdiv+1,(j-1)*subdiv+1,(k-1)*zheight+1)
+							for l in range(0,subdiv):
+								for m in range(0,subdiv):
+									for n in range(0,zheight):
+										new_mat_matrix[l+dex[0]][m+dex[1]][n+dex[2]] = 1
 
-#print(new_mat_matrix)
+			#print(new_mat_matrix)
 
-mat_matrix = new_mat_matrix
+			mat_matrix = new_mat_matrix
 
-# Material Properties
+		# Material Properties
 
-#Physical Voxel Properties
-vox_pitch = 0.01/subdiv #m
+		#Physical Voxel Properties
+		vox_pitch = 0.01/subdiv #m
 
 
-node_radius = 0 
+		node_radius = 0 
 
-#STRUT PROPERTIES
-#Physical Properties
-#Assuming a square, Ti6Al4V strut that is 0.5 mm on a side
-#Using Newtons, meters, and kilograms as the units
+		#STRUT PROPERTIES
+		#Physical Properties
+		#Assuming a square, Ti6Al4V strut that is 0.5 mm on a side
+		#Using Newtons, meters, and kilograms as the units
 
-frame_props = {"nu"  : 0.33, #poisson's ratio
-			   "d1"	 : 0.0005/subdiv, #m
-			   "d2"	 : 0.0005/subdiv, #m
-			   "th"  : 0,
-			   "E"   :  116000000000, #N/m^2
-			   "G"   :   42000000000,  #N/m^2
-			   "rho" :  4420, #kg/m^3
-			   "beam_divisions" : 0,
-			   "cross_section"  : 'rectangular',
-			   "roll": 0,
-			   "Le":0.56*vox_pitch}#1.0*vox_pitch/sqrt(2.0)} 
-'''
-frame_props = {"nu"  : 0.33, #poisson's ratio
-			   "d1"	 : 0.000564/subdiv, #m
-			   "th"	 : 0.000564/2.0/subdiv, #m
-			   "E"   :  116000000000, #N/m^2
-			   "G"   :   42000000000,  #N/m^2
-			   "rho" :  4420, #kg/m^3
-			   "beam_divisions" : 0,
-			   "cross_section"  : 'circular',
-			   "roll": 0,
-			   "Le":1.0*vox_pitch/sqrt(2.0)} 
-'''
+		frame_props = {"nu"  : 0.33, #poisson's ratio
+					   "d1"	 : 0.0005/subdiv, #m
+					   "d2"	 : 0.0005/subdiv, #m
+					   "th"  : 0,
+					   "E"   :  116000000000, #N/m^2
+					   "G"   :   42000000000,  #N/m^2
+					   "rho" :  4420, #kg/m^3
+					   "beam_divisions" : 0,
+					   "cross_section"  : 'rectangular',
+					   "roll": 0,
+					   "Le":0.56*vox_pitch}#1.0*vox_pitch/sqrt(2.0)} 
+		'''
+		frame_props = {"nu"  : 0.33, #poisson's ratio
+					   "d1"	 : 0.000564/subdiv, #m
+					   "th"	 : 0.000564/2.0/subdiv, #m
+					   "E"   :  116000000000, #N/m^2
+					   "G"   :   42000000000,  #N/m^2
+					   "rho" :  4420, #kg/m^3
+					   "beam_divisions" : 0,
+					   "cross_section"  : 'circular',
+					   "roll": 0,
+					   "Le":1.0*vox_pitch/sqrt(2.0)} 
+		'''
 
-#Node Map Population
-#Referencing the geometry-specific cuboct.py file. 
-#Future versions might have different files?
+		#Node Map Population
+		#Referencing the geometry-specific cuboct.py file. 
+		#Future versions might have different files?
 
-node_frame_map = np.zeros((subdiv,subdiv,subdiv,6))
-print(node_frame_map.shape)
-nodes,frames,node_frame_map = dschwarz.from_material(mat_matrix,vox_pitch)
+		#node_frame_map = np.zeros((subdiv,subdiv,subdiv,6))
+		nodes,frames,node_frame_map,dims = kelvin.from_material(mat_matrix,vox_pitch)
+		print(node_frame_map.shape)
+		frame_props["Le"] = kelvin.frame_length(vox_pitch)
 
-strain = 0.0001
-strain_disp = subdiv*vox_pitch*strain
-#Constraint and load population
-constraints = []
-loads = []
-#Constraints are added based on simple requirements right now
-for x in range(1,subdiv+1):
-	for y in range(1,subdiv+1):
-		#The bottom-most nodes are constrained to neither translate nor
-		#rotate
-		constraints.append({'node':node_frame_map[x][y][1][0],'DOF':0, 'value':0})
-		constraints.append({'node':node_frame_map[x][y][1][0],'DOF':1, 'value':0})
-		constraints.append({'node':node_frame_map[x][y][1][0],'DOF':2, 'value':0})		
-		constraints.append({'node':node_frame_map[x][y][1][3],'DOF':0, 'value':0})
-		constraints.append({'node':node_frame_map[x][y][1][3],'DOF':1, 'value':0})
-		constraints.append({'node':node_frame_map[x][y][1][3],'DOF':2, 'value':0})
-		#constraints.append({'node':node_frame_map[x][y][1][2],'DOF':3, 'value':0})
-		#constraints.append({'node':node_frame_map[x][y][1][2],'DOF':4, 'value':0})
-		#constraints.append({'node':node_frame_map[x][y][1][2],'DOF':5, 'value':0})
+		strain = 0.0001
+
+		strain_disp = zheight*vox_pitch*strain
+		#Constraint and load population
+		constraints = []
+		loads = []
+		#Constraints are added based on simple requirements right now
+		for x in range(1,subdiv+1):
+			for y in range(1,subdiv+1):
+				#The bottom-most nodes are constrained to neither translate nor
+				#rotate
+				constraints.append({'node':node_frame_map[x][y][1][2],'DOF':0, 'value':0})
+				constraints.append({'node':node_frame_map[x][y][1][2],'DOF':1, 'value':0})
+				constraints.append({'node':node_frame_map[x][y][1][2],'DOF':2, 'value':0})
+				constraints.append({'node':node_frame_map[x][y][1][2],'DOF':3, 'value':0})
+				constraints.append({'node':node_frame_map[x][y][1][2],'DOF':4, 'value':0})
+				constraints.append({'node':node_frame_map[x][y][1][2],'DOF':5, 'value':0})
+				
+				#The top most nodes are assigned a z-axis load, as well as being
+				#constrained to translate in only the z-direction.
+				#loads.append(      {'node':node_frame_map[x][y][size_z][5],'DOF':2, 'value':-5.0})
+				constraints.append({'node':node_frame_map[x][y][zheight][5],'DOF':0, 'value':0})
+				constraints.append({'node':node_frame_map[x][y][zheight][5],'DOF':1, 'value':0})
+				constraints.append({'node':node_frame_map[x][y][zheight][5],'DOF':2, 'value':-strain_disp})
+				#constraints.append({'node':node_frame_map[x][y][subdiv][5],'DOF':3, 'value':0})
+				#constraints.append({'node':node_frame_map[x][y][subdiv][5],'DOF':4, 'value':0})
+				#constraints.append({'node':node_frame_map[x][y][subdiv][5],'DOF':5, 'value':0})
+				#constraints.append({'node':node_ids[5],'DOF':2, 'value':0})
+
+		#frames = cuboct.remove_frame([(int(size_x/2.0)+1,int(size_y/2.0)+1,int(size_z/2.0)+1),2],node_frame_map,frames)
+		#dframes = cuboct.remove_frame([(int(size_x/2.0)+1,int(size_y/2.0)+1,int(size_z/2.0)+1),5],node_frame_map,dframes)
+
+
+
+		 #####  ### #     #    ####### #     # ####### ######  #     # ####### 
+		#     #  #  ##   ##    #     # #     #    #    #     # #     #    #    
+		#        #  # # # #    #     # #     #    #    #     # #     #    #    
+		 #####   #  #  #  #    #     # #     #    #    ######  #     #    #    
+		      #  #  #     #    #     # #     #    #    #       #     #    #    
+		#     #  #  #     #    #     # #     #    #    #       #     #    #    
+		 #####  ### #     #    #######  #####     #    #        #####     #    
+		                                                                       
+
+
+		#Group frames with their characteristic properties.
+		out_frames = [(np.array(frames),{'E'   : frame_props["E"],
+										 'rho' : frame_props["rho"],
+										 'nu'  : frame_props["nu"],
+										 'd1'  : frame_props["d1"],
+										 'd2'  : frame_props["d2"],
+										 'th'  : frame_props["th"],
+										 'beam_divisions' : frame_props["beam_divisions"],
+										 'cross_section'  : frame_props["cross_section"],
+										 'roll': frame_props["roll"],
+										 'loads':{'element':0},
+										 'prestresses':{'element':0},
+										 'Le': frame_props["Le"]})]
+
+		#Format node positions
+		out_nodes = np.array(nodes)
+
+		#Global Arguments 
+		global_args = {'frame3dd_filename': "test", 'length_scaling':1,"using_Frame3dd":False,"debug_plot":True, "gravity" : [0,0,0]}
+
+		if global_args["using_Frame3dd"]:
+			frame3dd.write_frame3dd_file(out_nodes, global_args, out_frames, constraints,loads)
+			subprocess.call("frame3dd {0}.csv {0}.out".format(global_args["frame3dd_filename"]), shell=True)
+			res_nodes, res_reactions = frame3dd.read_frame3dd_results(global_args["frame3dd_filename"])
+			res_displace = frame3dd.read_frame3dd_displacements(global_args["frame3dd_filename"])
+		else:
+			res_displace,C,Q = pfea.analyze_System(out_nodes, global_args, out_frames, constraints,loads)
+			#cProfile.run('res_displace,C,Q = pfea.analyze_System(out_nodes, global_args, out_frames, constraints,loads)')
+			#def_displace = pfea.analyze_System(out_nodes, global_args, def_frames, constraints,loads)
+
+		tot_force = 0
+		for constraint in constraints:
+			if constraint["value"] != 0:
+				tot_force = tot_force + C[int(constraint["node"]*6+constraint["DOF"])]
+		#print(len(frames)*frame_props["d1"]*frame_props["d2"]*frame_props["Le"]/(subdiv*vox_pitch)**3)
 		
-		#The top most nodes are assigned a z-axis load, as well as being
-		#constrained to translate in only the z-direction.
-		#loads.append(      {'node':node_frame_map[x][y][size_z][5],'DOF':2, 'value':-5.0})
-		constraints.append({'node':node_frame_map[x][y][subdiv][1],'DOF':0, 'value':0})
-		constraints.append({'node':node_frame_map[x][y][subdiv][1],'DOF':1, 'value':0})
-		constraints.append({'node':node_frame_map[x][y][subdiv][1],'DOF':2, 'value':-strain_disp})
-		constraints.append({'node':node_frame_map[x][y][subdiv][2],'DOF':0, 'value':0})
-		constraints.append({'node':node_frame_map[x][y][subdiv][2],'DOF':1, 'value':0})
-		constraints.append({'node':node_frame_map[x][y][subdiv][2],'DOF':2, 'value':-strain_disp})
-		#constraints.append({'node':node_frame_map[x][y][subdiv][5],'DOF':3, 'value':0})
-		#constraints.append({'node':node_frame_map[x][y][subdiv][5],'DOF':4, 'value':0})
-		#constraints.append({'node':node_frame_map[x][y][subdiv][5],'DOF':5, 'value':0})
-		#constraints.append({'node':node_ids[5],'DOF':2, 'value':0})
-
-#frames = cuboct.remove_frame([(int(size_x/2.0)+1,int(size_y/2.0)+1,int(size_z/2.0)+1),2],node_frame_map,frames)
-#dframes = cuboct.remove_frame([(int(size_x/2.0)+1,int(size_y/2.0)+1,int(size_z/2.0)+1),5],node_frame_map,dframes)
-
-
-
- #####  ### #     #    ####### #     # ####### ######  #     # ####### 
-#     #  #  ##   ##    #     # #     #    #    #     # #     #    #    
-#        #  # # # #    #     # #     #    #    #     # #     #    #    
- #####   #  #  #  #    #     # #     #    #    ######  #     #    #    
-      #  #  #     #    #     # #     #    #    #       #     #    #    
-#     #  #  #     #    #     # #     #    #    #       #     #    #    
- #####  ### #     #    #######  #####     #    #        #####     #    
-                                                                       
-
-
-#Group frames with their characteristic properties.
-out_frames = [(np.array(frames),{'E'   : frame_props["E"],
-								 'rho' : frame_props["rho"],
-								 'nu'  : frame_props["nu"],
-								 'd1'  : frame_props["d1"],
-								 'd2'  : frame_props["d2"],
-								 'th'  : frame_props["th"],
-								 'beam_divisions' : frame_props["beam_divisions"],
-								 'cross_section'  : frame_props["cross_section"],
-								 'roll': frame_props["roll"],
-								 'loads':{'element':0},
-								 'prestresses':{'element':0},
-								 'Le': frame_props["Le"]})]
-
-#Format node positions
-out_nodes = np.array(nodes)
-
-#Global Arguments 
-global_args = {'frame3dd_filename': "test", 'length_scaling':1,"using_Frame3dd":False,"debug_plot":True, "gravity" : [0,0,0]}
-
-if global_args["using_Frame3dd"]:
-	frame3dd.write_frame3dd_file(out_nodes, global_args, out_frames, constraints,loads)
-	subprocess.call("frame3dd {0}.csv {0}.out".format(global_args["frame3dd_filename"]), shell=True)
-	res_nodes, res_reactions = frame3dd.read_frame3dd_results(global_args["frame3dd_filename"])
-	res_displace = frame3dd.read_frame3dd_displacements(global_args["frame3dd_filename"])
-else:
-	res_displace,C,Q = pfea.analyze_System(out_nodes, global_args, out_frames, constraints,loads)
-	#cProfile.run('res_displace,C,Q = pfea.analyze_System(out_nodes, global_args, out_frames, constraints,loads)')
-	#def_displace = pfea.analyze_System(out_nodes, global_args, def_frames, constraints,loads)
-
-tot_force = 0
-for constraint in constraints:
-	if constraint["value"] != 0:
-		tot_force = tot_force + C[constraint["node"]*6+constraint["DOF"]]
-print(tot_force/(subdiv*subdiv*vox_pitch*vox_pitch)/strain)
-
+		zheightvals.append([zheight,tot_force/(subdiv*vox_pitch)**2/(strain)])
+		print(zheight,tot_force/(subdiv*vox_pitch)**2/(strain))
+	vals.append([subdiv,zheightvals])
+print(vals)
 
 if global_args["debug_plot"]:
 	### Right now the debug plot only does x-y-z displacements, no twisting
@@ -223,7 +230,7 @@ if global_args["debug_plot"]:
 	ax = fig.add_subplot(111, projection='3d')
 	ax.set_aspect('equal')
 	frame_coords = []
-	factor = 1000
+	factor = 10
 
 	print(matplotlib.projections.get_projection_names())
 	for i,node in enumerate(nodes):

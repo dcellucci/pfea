@@ -35,6 +35,8 @@ alt_nlocs = [[0.0 ,0.25,0.5 ],
              [1.0 ,0.25,0.5 ],
              [1.0 ,0.75,0.5 ]]
 
+#Third form builds in the (131)
+
 #References Node_locs, maps frame number to
 #indices in node_locs corresponding to end-points
 #The order of both the pairs and the IDs corresponds to 
@@ -95,7 +97,7 @@ shared_frames = [[[-1, 0,-1], 1, [0,2]],
 def from_material(mat_matrix,vox_pitch):
 	size_x = len(mat_matrix)
 	size_y = len(mat_matrix[0])
-	size_z = len(mat_matrix[0][0])
+	size_z = len(mat_matrix[0][0])/uc_dims[2]
 
 	mat_dims = (np.array([size_x,size_y,size_z])-2)*uc_dims*vox_pitch
 	node_frame_map = np.zeros((size_x,size_y,size_z,4))
@@ -159,7 +161,7 @@ def from_material(mat_matrix,vox_pitch):
 def alt_from_material(mat_matrix,vox_pitch):
 	size_x = len(mat_matrix)
 	size_y = len(mat_matrix[0])
-	size_z = len(mat_matrix[0][0])
+	size_z = int(len(mat_matrix[0][0]))
 	node_frame_map = np.zeros((size_x,size_y,size_z,18),dtype=int)
 	
 	mat_dims = (np.array([size_x,size_y,size_z])-2)*alt_dims*vox_pitch
@@ -225,7 +227,7 @@ def alt_from_material(mat_matrix,vox_pitch):
 						else:
 							frames.append([node_ids[alt_flocs[q][0]],
 									   	   node_ids[alt_flocs[q][1]]])
-	return nodes,frames, node_frame_map,mat_dims
+	return nodes,frames, node_frame_map,alt_dims
 
 def frame_length(vox_pitch):
 	return 0.56*vox_pitch

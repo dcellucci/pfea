@@ -13,9 +13,8 @@ from math import *
 import scipy as sp
 
 #The sparse solver
-from cvxopt import matrix,sparse,cholmod
-
-
+import cvxopt as co
+from cvxopt import cholmod
 
 #    #       #     #    #    ####### ######  ### #     # 
 #   #        ##   ##   # #      #    #     #  #   #   #  
@@ -42,9 +41,16 @@ def assemble_K(nodes,beam_sets,Q,args):
 	#	nE 		: the number of beam elements
 	'''
 	#Initialize K to zeros
-	K = np.zeros((args["dof"],args["dof"]))
-
+	#K = np.zeros((args["dof"],args["dof"]))
+	tot_dof = args["dof"]
+	K = co.spmatrix([],[],[],(tot_dof,tot_dof))
+	data = np.zeros((tot_dof*6*6*9,))
+	row = np.zeros((tot_dof*6*6*9,), dtype=np.int)
+	col = np.zeros((tot_dof*6*6*9,), dtype=np.int)
+	data2 = np.array([])
 	q_index = 0
+	dat_dex = 0
+	size = 18
 	for beamset,bargs in beam_sets:
 		#every beam set lists the physical properties
 		#associated with that beam
@@ -61,7 +67,6 @@ def assemble_K(nodes,beam_sets,Q,args):
 					  "p"		: bargs["roll"],
 					  "Le"		: bargs["Le"],
 					  "shear"	: True}
-
 		for beam in beamset:
 			#Positions of the endpoint nodes for this beam
 			xn1 = nodes[beam[0]]
@@ -73,18 +78,45 @@ def assemble_K(nodes,beam_sets,Q,args):
 			#Things that are not faster than the above:
 			#   sp.spatial.distance.euclidean(xn2,xn1)
 			
-			beam_props["T"]	  = -Q[q_index][0]
+			beam_props["T"]	  = -Q[q_index,0]
 			q_index = q_index+1
+
 			ke = elastic_K(beam_props)
 			kg = geometric_K(beam_props)
+			bi0 = 6*int(beam[0])
+			bi1 = 6*int(beam[1])
+			offsets = [[bi0,bi0],[bi1,bi0],[bi0,bi1],[bi1,bi1]]
 
-			ktot = ke+kg
+			'''
+			locs = [[0,10],[10,20],[10,20],[20,30]]
 
-			K[6*beam[0]:6*beam[0]+6,6*beam[0]:6*beam[0]+6] += ktot[0:6,0:6]
-			K[6*beam[1]:6*beam[1]+6,6*beam[0]:6*beam[0]+6] += ktot[6:12,0:6]
-			K[6*beam[0]:6*beam[0]+6,6*beam[1]:6*beam[1]+6] += ktot[0:6,6:12]
-			K[6*beam[1]:6*beam[1]+6,6*beam[1]:6*beam[1]+6] += ktot[6:12,6:12]
+			tdata, trow, tcol = pop_k(beam_props)
+			order = [[trow,tcol],[trow,tcol],[tcol,trow],[trow,tcol]]
 
+			for i in range(4):
+				data[size*dat_dex:size*(dat_dex+1)] = tdata[locs[i][0]:locs[i][1]]
+				row[size*dat_dex:size*(dat_dex+1)]  = order[i][0]+offsets[i][0]
+				col[size*dat_dex:size*(dat_dex+1)]  = order[i][1]+offsets[i][1]
+				dat_dex=dat_dex+1
+			'''
+			for i in range(4):
+				ktmp = sp.sparse.coo_matrix(ke[i]+kg[i])
+				trow = ktmp.row+offsets[i][0]
+				tcol = ktmp.col+offsets[i][1]
+				lendat = len(ktmp.data)
+				#data2 = np.append(data2,ktmp.data)
+				#row = np.append(row,trow)#ktmp.row+offsets[i][0])
+				#col = np.append(col,tcol)#ktmp.col+offsets[i][1])
+				data[dat_dex:dat_dex+lendat] = ktmp.data[:]
+				row[dat_dex:dat_dex+lendat] = trow[:]
+				col[dat_dex:dat_dex+lendat] = tcol[:]
+				dat_dex+=lendat
+	
+	#print(data[dat_dex*size:(dat_dex+1)*size])
+	data = data[:dat_dex]
+	row = row[:dat_dex]
+	col = col[:dat_dex]
+	K = co.spmatrix(data,col,row,(tot_dof,tot_dof))
 	return K
 	
 #ELASTIC_K - space frame elastic stiffness matrix in global coordinates
@@ -122,7 +154,7 @@ def elastic_K(beam_props):
 
 	#initialize the output
 	k = np.zeros((12,12))
-
+	#k = co.matrix(0.0,(12,12))
 	#define the transform between local and global coordinate frames
 	t = coord_trans(xn1,xn2,Le,p)
 
@@ -137,27 +169,27 @@ def elastic_K(beam_props):
 	else:
 		Ksy = Ksz = 0.0
 	
-	k[0][0]  = k[6][6]   = 1.0*E*Ax / Le
-	k[1][1]  = k[7][7]   = 12.*E*Iz / ( Le*Le*Le*(1.+Ksy) )
-	k[2][2]  = k[8][8]   = 12.*E*Iy / ( Le*Le*Le*(1.+Ksz) )
-	k[3][3]  = k[9][9]   = 1.0*G*J / Le
-	k[4][4]  = k[10][10] = (4.+Ksz)*E*Iy / ( Le*(1.+Ksz) )
-	k[5][5]  = k[11][11] = (4.+Ksy)*E*Iz / ( Le*(1.+Ksy) )
+	k[0,0]  = k[6,6]   = 1.0*E*Ax / Le
+	k[1,1]  = k[7,7]   = 12.*E*Iz / ( Le*Le*Le*(1.+Ksy) )
+	k[2,2]  = k[8,8]   = 12.*E*Iy / ( Le*Le*Le*(1.+Ksz) )
+	k[3,3]  = k[9,9]   = 1.0*G*J / Le
+	k[4,4]  = k[10,10] = (4.+Ksz)*E*Iy / ( Le*(1.+Ksz) )
+	k[5,5]  = k[11,11] = (4.+Ksy)*E*Iz / ( Le*(1.+Ksy) )
 
-	k[4][2]  = k[2][4]   = -6.*E*Iy / ( Le*Le*(1.+Ksz) )
-	k[5][1]  = k[1][5]   =  6.*E*Iz / ( Le*Le*(1.+Ksy) )
-	k[6][0]  = k[0][6]   = -k[0][0]
+	k[4,2]  = k[2,4]   = -6.*E*Iy / ( Le*Le*(1.+Ksz) )
+	k[5,1]  = k[1,5]   =  6.*E*Iz / ( Le*Le*(1.+Ksy) )
+	k[6,0]  = k[0,6]   = -k[0,0]
 
-	k[11][7] = k[7][11]  =  k[7][5] = k[5][7] = -k[5][1]
-	k[10][8] = k[8][10]  =  k[8][4] = k[4][8] = -k[4][2]
-	k[9][3]  = k[3][9]   = -k[3][3]
-	k[10][2] = k[2][10]   =  k[4][2]
-	k[11][1] = k[1][11]   =  k[5][1]
+	k[11,7] = k[7,11]  =  k[7,5] = k[5,7] = -k[5,1]
+	k[10,8] = k[8,10]  =  k[8,4] = k[4,8] = -k[4,2]
+	k[9,3]  = k[3,9]   = -k[3,3]
+	k[10,2] = k[2,10]  =  k[4,2]
+	k[11,1] = k[1,11]  =  k[5,1]
 
-	k[7][1]  = k[1][7]   = -k[1][1]
-	k[8][2]  = k[2][8]   = -k[2][2]
-	k[10][4] = k[4][10]  = (2.-Ksz)*E*Iy / ( Le*(1.+Ksz) )
-	k[11][5] = k[5][11]  = (2.-Ksy)*E*Iz / ( Le*(1.+Ksy) )
+	k[7,1]  = k[1,7]   = -k[1,1]
+	k[8,2]  = k[2,8]   = -k[2,2]
+	k[10,4] = k[4,10]  = (2.-Ksz)*E*Iy / ( Le*(1.+Ksz) )
+	k[11,5] = k[5,11]  = (2.-Ksy)*E*Iz / ( Le*(1.+Ksy) )
 
 
 	#now we transform k to the global coordinates
@@ -173,7 +205,7 @@ def elastic_K(beam_props):
 					print("Ke Not Symmetric")
 				k[i][j] = k[j][i] = 0.5 * ( k[i][j] + k[j][i] )
 	'''
-	return k
+	return [k[:6,:6],k[6:,:6],k[:6,6:],k[6:,6:]]
 
 #GEOMETRIC_K - space frame geometric stiffness matrix, global coordnates
 
@@ -252,7 +284,59 @@ def geometric_K(beam_props):
 	# Check and enforce symmetry of the elastic stiffness matrix for the element
 	kg = 0.5*(kg+kg.T)
 	
-	return kg
+	return [kg[:6,:6],kg[6:,:6],kg[:6,6:],kg[6:,6:]]
+
+def pop_k(beam_props):
+	# beam_props is a dictionary with the following values
+	# xn1   : position vector for start node
+	# xn2	: position vector for end node
+	# Le    : Effective beam length (taking into account node diameter)
+	# Asy   : Effective area for shear effects, y direction
+	# Asz   : Effective area for shear effects, z direction
+	# G		: Shear modulus
+	# E 	: Elastic modulus
+	# J 	: Polar moment of inertia
+	# Iy 	: Bending moment of inertia, y direction
+	# Iz 	: bending moment of inertia, z direction
+	# p 	: The roll angle (radians)
+	# T 	: internal element end force
+	# shear : whether shear effects are considered. 
+	
+	xn1 	= beam_props["xn1"]
+	xn2 	= beam_props["xn2"]
+	L   	= beam_props["Le"]
+	Le  	= beam_props["Le"]
+	Ax		= beam_props["Ax"]
+	Asy 	= beam_props["Asy"]
+	Asz 	= beam_props["Asz"]
+	G   	= beam_props["G"]
+	E   	= beam_props["E"]
+	J 		= beam_props["J"]
+	Iy 		= beam_props["Iy"]
+	Iz 		= beam_props["Iz"]
+	p 		= beam_props["p"]
+	T 		= beam_props["T"]
+	shear 	= beam_props["shear"]
+
+	t = coord_trans(xn1,xn2,Le,p)
+
+	if shear:
+		Ksy = 12.0*E*Iz / (G*Asy*Le*Le)
+		Ksz = 12.0*E*Iy / (G*Asz*Le*Le)
+		Dsy = (1+Ksy)*(1+Ksy)
+		Dsz = (1+Ksz)*(1+Ksz)
+	else:
+		Ksy = Ksz = 0.0
+		Dsy = Dsz = 1.0
+
+	data = np.zeros(30)
+	rows = np.array([0,1,2,3,4,5,5,4,2,1])
+	cols = np.array([0,1,2,3,4,5,1,2,4,5])
+	
+	
+
+	return data,rows,cols
+
 
  #####  ####### #       #     # ####### ######  
 #     # #     # #       #     # #       #     # 
@@ -271,70 +355,84 @@ def solve_system(K,nodemap,D,forces,con_dof):
 	#First step is to organize K, x, and f into that form
 	#(we will use nodemap)
 
-	spl_dex = len(K)-con_dof
+	spl_dex = K.size[0]-con_dof
 
+	K = nodemap*K*nodemap
+	forces = nodemap*forces
+	D = nodemap*D
+	'''
 	for nmap in nodemap:
 		swap_Matrix_Rows(K,nmap[0],nmap[1])
 		swap_Matrix_Cols(K,nmap[0],nmap[1])
 		swap_Vector_Vals(forces,nmap[0],nmap[1])
 		swap_Vector_Vals(D,nmap[0],nmap[1])
-
+	'''
 	#splitting the reorganized matrix up into the partially solved equations
-	K1 = np.hsplit(K,np.array([spl_dex])) 
-	[Kqq,Krq] = np.vsplit(K1[0],np.array([spl_dex]))
-	[Kqr,Krr] = np.vsplit(K1[1],np.array([spl_dex]))
-
+	[Kqq,Kqr,Krq,Krr] = [K[:spl_dex,:spl_dex],K[:spl_dex,spl_dex:],K[spl_dex:,:spl_dex],K[spl_dex:,spl_dex:]]
+	#K1 = np.hsplit(K,np.array([spl_dex])) 
+	#[Kqq,Krq] = np.vsplit(K1[0],np.array([spl_dex]))
+	#[Kqr,Krr] = np.vsplit(K1[1],np.array([spl_dex]))
+	#print(Kqq)
 	#Knew = np.hstack((np.vstack((Kqq,Krq)),np.vstack((Kqr,Krr))))
 
 	#for row in K-Knew:
 	#	print(row)
 
-	[xq,xr] = np.split(D,[spl_dex])
-	[fq,fr] = np.split(forces,[spl_dex])
+	[xq,xr] = [D[:spl_dex],D[spl_dex:]]#np.split(D,[spl_dex])
+	[fq,fr] = [forces[:spl_dex],forces[spl_dex:]]#np.split(forces,[spl_dex])
 	
-
+	#xq = co.matrix(xq)
+	#xr = co.matrix(xr)
+	#fq = co.matrix(fq)
+	#fr = co.matrix(fr)
 	#Now we want to solve the equation
 	# Kqq xq + Kqr xr = fq
-
-	Kqr_xr = np.dot(Kqr,xr)
+	#print(size(co.matrix(Kqr,Kqr.size)))
+	#Kqr = co.matrix(Kqr,Kqr.size)
+	Kqr_xr = Kqr*xr
+	b = fq-Kqr_xr
+	#print(b,fq,Kqr_xr,Kqq)
 	
 	try:
-		# Scipy solver- good for dense matrices (small DoF)
-		tC = sp.linalg.cho_factor(Kqq)
-		xq = sp.linalg.cho_solve(tC,fq-Kqr_xr)
+		#tKqq = np.array(co.matrix(Kqq))
+		#tb = np.array(co.matrix(b))
+		#tC = sp.linalg.cho_factor(tKqq)
+		#xq = sp.linalg.cho_solve(tC,tb)
 
 		# Sparse Solver- using the CVXOPT cholesky solver 
-		#spKqq = sparse(matrix(Kqq))
-		#b = matrix(fq-Kqr_xr)
-		#cholmod.linsolve(spKqq,b)
-		#xq = np.array(b).T[0]
+		cholmod.linsolve(Kqq,b)
+		xq = b 
 
-	except:
+	except Exception,e:
+		print(type(e))
+		print(e)
 		print("Warning: Cholesky did not work")
 		#If Cholesky dies (perhaps the matrix is not pos-def and symmetric)
 		#We switch over to the sad scipy solver. very slow.
 		xq = sp.linalg.solve(Kqq,fq-Kqr_xr)
-	
-	Krq_xq = np.dot(Krq,xq)
-	Krr_xr = np.dot(Krr,xr)
+
+	Krq_xq = Krq*co.matrix(xq)
+	Krr_xr = Krr*xr
 
 	cr = Krq_xq+Krr_xr-fr
 
-	D = np.append(xq,xr)
-	C = np.append(np.zeros(spl_dex),cr)
+	D = co.matrix(np.append(xq,xr))
+	C = co.matrix(np.append(np.zeros(spl_dex),cr))
 	
+	K = nodemap*K*nodemap
+	forces = nodemap*forces
+	D = nodemap*D
+	C = nodemap*C
+
+	'''
 	for nmap in nodemap:
 		swap_Matrix_Rows(K,nmap[0],nmap[1])
 		swap_Matrix_Cols(K,nmap[0],nmap[1])
 		swap_Vector_Vals(forces,nmap[0],nmap[1])
 		swap_Vector_Vals(D,nmap[0],nmap[1])
 		swap_Vector_Vals(C,nmap[0],nmap[1])
-
+	'''
 	return D,C
-	#for de in D:
-	#	print(de)
-	#for ce in C:
-	#	print(ce)
 
 ####### ####### ######   #####  #######  #####  
 #       #     # #     # #     # #       #     # 
@@ -345,20 +443,19 @@ def solve_system(K,nodemap,D,forces,con_dof):
 #       ####### #     #  #####  #######  #####  
                                                 
 
-def assemble_loads(loads,constraints,nodes,beam_sets,global_args,tot_dof,length_scaling):
-	# creates force vector b consisting of:
-	#     Nodal Loads
-	#     Gravity Loads
-	# Also includes
-	#     Virtual loads from prescribed displacements
-
-	forces = np.zeros(tot_dof)
-	dP = np.zeros(tot_dof)
+def assemble_loads(loads,constraints,nodes, beam_sets,global_args,tot_dof,length_scaling):
+	# creates force vector b
+	# Nodal Loads
+	# virtual loads from prescribed displacements
+	forces = co.matrix(0.0,(tot_dof,1))#np.zeros(tot_dof)
+	dP = co.matrix(0.0,(tot_dof,1))#np.zeros(tot_dof)
 
 	grav = np.array(global_args["gravity"])
+
 	#Loads from specified nodal loads
 	for load in loads:
 		forces[6*load['node']+load['DOF']] = load['value']
+
 	if np.linalg.norm(grav) > 0:
 		for beamset,args in beam_sets:
 			rho = args["rho"]
@@ -389,7 +486,7 @@ def assemble_loads(loads,constraints,nodes,beam_sets,global_args,tot_dof,length_
 				forces[6*beam[1]+5] += (-1.0/12.0*rho*Ax*L*L)*mom[2]
 
 	for constraint in constraints:
-		dP[6*constraint['node']+constraint['DOF']] = constraint['value']*length_scaling
+		dP[int(6*constraint['node']+constraint['DOF'])] = constraint['value']*length_scaling
 
 	return forces,dP
 
@@ -412,15 +509,15 @@ def element_end_forces(nodes,Q,beam_sets,D):
 					  "Le"		: bargs["Le"],
 					  "shear"	: True}
 
-		s = np.zeros(12)
+		s = co.matrix(0.0,(1,12))
 
 		for m,beam in enumerate(beamset):
-			dn1 = D[beam[0]*6:beam[0]*6+6]
-			dn2 = D[beam[1]*6:beam[1]*6+6]
+			dn1 = np.array(list(D[int(beam[0])*6:int(beam[0])*6+6]))
+			dn2 = np.array(list(D[int(beam[1])*6:int(beam[1])*6+6]))
 			beam_props["dn1"] = dn1
 			beam_props["dn2"] = dn2
-			xn1 = nodes[beam[0]]
-			xn2 = nodes[beam[1]]
+			xn1 = nodes[int(beam[0])]
+			xn2 = nodes[int(beam[1])]
 			beam_props["xn1"] = xn1
 			beam_props["xn2"] = xn2
 
@@ -549,31 +646,45 @@ compute: {dF_q} =   {F_q} - [K_qq]{D_q} - [K_qr]{D_r}
  return: dF and ||dF||/||F||
 '''
 def equilibrium_error(K,nodemap,F,D,tot_dof,con_dof):
-	dF = np.zeros(tot_dof)
 	
 	#First, reorganize K, F, D so that 
 	#
+	K = nodemap*K*nodemap
+	F = nodemap*F
+	D = nodemap*D
+	'''
 	for nmap in nodemap:
 		swap_Matrix_Rows(K,nmap[0],nmap[1])
 		swap_Matrix_Cols(K,nmap[0],nmap[1])
 		swap_Vector_Vals(F,nmap[0],nmap[1])
 		swap_Vector_Vals(D,nmap[0],nmap[1])
-
+	'''
 	q = tot_dof-con_dof
-	Fq = F[0:q].copy()
-	dF[0:q] = Fq - np.dot(K[0:q,0:q],D[0:q]) - np.dot(K[0:q,q:tot_dof],D[q:tot_dof])
+	Fq = co.matrix(F[0:q])
+	#print(Fq.size,(K[0:q,0:q]*Dt[0:q]).size,(K[0:q,q:tot_dof]*D[q:tot_dof]).size)
+	dF = Fq - K[0:q,0:q]*D[0:q] - K[0:q,q:tot_dof]*D[q:tot_dof]
+	dF = co.matrix(np.append(np.array(dF),np.zeros(con_dof)))
 	
+	K = nodemap*K*nodemap
+	F = nodemap*F
+	dF = nodemap*dF
+	D = nodemap*D
+
+	'''
 	for nmap in nodemap:
 		swap_Matrix_Rows(K,nmap[0],nmap[1])
 		swap_Matrix_Cols(K,nmap[0],nmap[1])
 		swap_Vector_Vals(F,nmap[0],nmap[1])
 		swap_Vector_Vals(dF,nmap[0],nmap[1])
 		swap_Vector_Vals(D,nmap[0],nmap[1])
+	'''
 
-	norm = np.linalg.norm(Fq)
+	#norm = np.linalg.norm(np.array(F))
+	norm = np.sqrt(sum(F**2))
 	#if norm==0:
 	#	norm = 1
-	return dF,np.linalg.norm(dF)/norm
+	#print(F)
+	return dF,np.sqrt(sum(dF**2))/norm
 
 
 
@@ -745,11 +856,13 @@ def analyze_System(nodes, global_args, beam_sets, constraints,loads):
 	global_args["dof"] = tot_dof
 	#calculate the node mapping that allows for straightforward
 	#organization of the stiffness matrix
-	D,node_map = gen_Node_map(nodes,constraints)
+	node_map = gen_Node_map(nodes,constraints)
+
+	D = co.matrix(0.0,(1,tot_dof))
 
 	#Part 1 of the Above algorithm
-	K = np.zeros((tot_dof,tot_dof))
-	Q = np.zeros((nE,12))
+	K = co.spmatrix([],[],[],(tot_dof,tot_dof))
+	Q = co.matrix(0.0,(nE,12))
 	K = assemble_K(nodes,beam_sets,Q,global_args)
 
 	#Part 2
@@ -767,32 +880,36 @@ def analyze_System(nodes, global_args, beam_sets, constraints,loads):
 	F,dP = assemble_loads(loads,constraints,nodes,beam_sets,global_args,tot_dof,length_scaling)
 	dD = dP
 	C  = np.zeros(tot_dof)
-
 	dD,C = solve_system(K,node_map,dD,F,con_dof)
 
+	
 	#Part 5 
 	#Add together displacements due to temperature and
 	#mechanical, as well as forces
-	D = D + dD
+	D = D.T + dD
 	
 	#Part 6
 	element_end_forces(nodes,Q, beam_sets, D)
-
-	error = 1.0
 	
+	error = 1.0
 	dF,error = equilibrium_error(K,node_map,F,D,tot_dof,con_dof)
-	if error==inf:
-		error = 0.0
-		print("Something's wrong: did you remember to set loads? Skipping Quasi-Newton")
+	
 	
 	#Part 7
 	#Quasi newton-raphson
 	it = 0
-	while error > 1.0e-9 and it < 10:
+	if error == inf:
+		error = 0.0
+		print("Something's wrong: did you remember to set loads? Skipping Quasi-Newton")
+		it = 11
+	print(error)
+	lasterror = 1.0
+	error = 0.5
+	while np.abs(error-lasterror) > 0.01*error and error > 1e-9 and it < 10:
 		it = it + 1
 		
 		K = assemble_K(nodes,beam_sets,Q,global_args)
-
+		lasterror = error
 		dF,error = equilibrium_error(K,node_map,F,D,tot_dof,con_dof)
 
 		dD,C = solve_system(K,node_map,dD,dF,con_dof)
