@@ -4,9 +4,6 @@
 #import pycuda.autoinit
 #import skcuda.linalg as sklinalg
 
-
-
-
 import numpy as np
 from pfeautil import *
 from math import *
@@ -898,13 +895,17 @@ def analyze_System(nodes, global_args, beam_sets, constraints,loads):
 	#Part 7
 	#Quasi newton-raphson
 	it = 0
+	
 	if error == inf:
 		error = 0.0
 		print("Something's wrong: did you remember to set loads? Skipping Quasi-Newton")
 		it = 11
-	print(error)
+	
+	#print(error)
+	
 	lasterror = 1.0
 	error = 0.5
+	
 	while np.abs(error-lasterror) > 0.01*error and error > 1e-9 and it < 10:
 		it = it + 1
 		

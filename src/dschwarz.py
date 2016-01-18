@@ -235,40 +235,38 @@ def frame_length(vox_pitch):
 def alt_frame_length(vox_pitch):
 	return 0.5*vox_pitch
 
-def remove_frame(loc,node_frame_map,frames):
-	# loc is a list containing a (1,3) tuple with the x,y,z location of the voxel
-	# and an int with the index of the desired frame to remove.
-	id1 = node_frame_map[loc[0][0]][loc[0][1]][loc[0][2]][frame_locs[loc[1]][0]]
-	id2 = node_frame_map[loc[0][0]][loc[0][1]][loc[0][2]][frame_locs[loc[1]][1]]
+def implicit(coords):
+	#returns first order nodal approximation for the
+	#p-schwarz surface
+	#f(x,y,z) = cos(x) + cos(y) + cos(z) 
+	#f(x,y,z) == 0 is the surface
+	coords = np.array(coords)
+	coords = (coords - 0.5)*(2*np.pi)
+	return np.sin(coords[0])*np.sin(coords[1])*np.sin(coords[2]) + np.sin(coords[0])*np.cos(coords[1])*np.cos(coords[2]) + np.cos(coords[0])*np.sin(coords[1])*np.cos(coords[2]) + np.cos(coords[0])*np.cos(coords[1])*np.sin(coords[2]) 
 
-	c_frame = np.copy(np.array(frames))
-	for i,frame in enumerate(frames):
-		if frame[0] == id1 and frame[1] == id2:
-			c_frame = np.delete(c_frame,i,0)
+def boundary_curves(res,thresh):
+	#returns all six boundary curves for the cubic unit
+	#cell
+	#must specify resolution
+	#tval format = [i,j,0.0,1.0]
 
-	return c_frame
+	sprops = [[2,0,1],
+			  [3,0,1],
+			  [0,2,1],
+			  [0,3,1],
+			  [0,1,2],
+			  [0,1,3]]
+	
+	bound_curves = []
 
-def remove_node(loc, node_frame_map,frames,nodes):
-	# loc is a list containing a the x,y,z location of the voxel
-	# and the index of the desired node to remove.
-	# removes the node, and all nodes connected to the node.
-	nid = int(node_frame_map[loc[0]][loc[1]][loc[2]][loc[3]])
-	remove_index = []
+	
+	for prop in sprops:
+		bound_curve = []
+		for i in np.arange(0.0,1.0,1.0/res):
+			for j in np.arange(0.0,1.0,1.0/res):
+				tval = [i,j,0.0,1.0]
+				if np.abs(implicit((tval[prop[0]],tval[prop[1]],tval[prop[2]]))) < thresh:
+					bound_curve.append([tval[prop[0]],tval[prop[1]],tval[prop[2]]])
+		bound_curves.append(bound_curve)
 
-	for i,frame in enumerate(frames):
-		if nid in frame:
-			remove_index.append(i)
-		if frame[0] > nid:
-			frame[0] = frame[0]-1
-		if frame[1] > nid:
-			frame[1] = frame[1]-1
-
-	for i,row in enumerate(node_frame_map):
-		for j,col in enumerate(node_frame_map):
-			for k,dep in enumerate(node_frame_map):
-				for l,item in enumerate(node_frame_map):
-					if(node_frame_map[i][j][k][l] > nid):
-						node_frame_map[i][j][k][l] = node_frame_map[i][j][k][l]-1
-	print(remove_index)
-	return np.delete(frames,remove_index,0), np.delete(nodes,nid,0),node_frame_map
-
+	return bound_curves

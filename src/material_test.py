@@ -7,53 +7,58 @@ import subprocess
 import pfea
 import cProfile
 
+#Geometry Imports
 import dschwarz
+import pschwarz
 import cuboct
 import cuboct_buckle
 import cubic
 import kelvin
+import octet
 
 from math import *
 
 
-######  #######  #####   #####  ######  ### ######  ####### ### ####### #     # 
-#     # #       #     # #     # #     #  #  #     #    #     #  #     # ##    # 
-#     # #       #       #       #     #  #  #     #    #     #  #     # # #   # 
-#     # #####    #####  #       ######   #  ######     #     #  #     # #  #  # 
-#     # #             # #       #   #    #  #          #     #  #     # #   # # 
-#     # #       #     # #     # #    #   #  #          #     #  #     # #    ## 
-######  #######  #####   #####  #     # ### #          #    ### ####### #     # 
+######  #######  #####   #####  ######  ### ######  ####### ### ####### #     #
+#     # #       #     # #     # #     #  #  #     #    #     #  #     # ##    #
+#     # #       #       #       #     #  #  #     #    #     #  #     # # #   #
+#     # #####    #####  #       ######   #  ######     #     #  #     # #  #  #
+#     # #             # #       #   #    #  #          #     #  #     # #   # #
+#     # #       #     # #     # #    #   #  #          #     #  #     # #    ##
+######  #######  #####   #####  #     # ### #          #    ### ####### #     #
 
-# Performs a standard modulus sweep for a lattice. 
-# We should see a monotonically increasing modulus, as we 
+# Performs a standard modulus sweep for a lattice.
+# We should see a monotonically increasing modulus, as we
 # increased the normalized cell dimension
 
 
-####### ######     #    #     # ####### 
-#       #     #   # #   ##   ## #       
-#       #     #  #   #  # # # # #       
-#####   ######  #     # #  #  # #####   
-#       #   #   ####### #     # #       
-#       #    #  #     # #     # #       
-#       #     # #     # #     # ####### 
-                                                 
-######  ####### ######  #     # #          #    ####### ### ####### #     # 
-#     # #     # #     # #     # #         # #      #     #  #     # ##    # 
-#     # #     # #     # #     # #        #   #     #     #  #     # # #   # 
-######  #     # ######  #     # #       #     #    #     #  #     # #  #  # 
-#       #     # #       #     # #       #######    #     #  #     # #   # # 
-#       #     # #       #     # #       #     #    #     #  #     # #    ## 
-#       ####### #        #####  ####### #     #    #    ### ####### #     # 
-                                                                            
+####### ######     #    #     # #######
+#       #     #   # #   ##   ## #
+#       #     #  #   #  # # # # #
+#####   ######  #     # #  #  # #####
+#       #   #   ####### #     # #
+#       #    #  #     # #     # #
+#       #     # #     # #     # #######
 
-#Temporary Material Matrix - NxNxN grid 
+######  ####### ######  #     # #          #    ####### ### ####### #     #
+#     # #     # #     # #     # #         # #      #     #  #     # ##    #
+#     # #     # #     # #     # #        #   #     #     #  #     # # #   #
+######  #     # ######  #     # #       #     #    #     #  #     # #  #  #
+#       #     # #       #     # #       #######    #     #  #     # #   # #
+#       #     # #       #     # #       #     #    #     #  #     # #    ##
+#       ####### #        #####  ####### #     #    #    ### ####### #     #
+
+
+#Temporary Material Matrix - NxNxN grid
 # at the moment:
 # 1's correspond to material being there
 # 0's correspond to no material
 
 modvals = []
 for subdiv in range(8,9):
-	for tar_den in [0.001]:#,0.000316,0.001,0.00316,0.01,0.0316,0.1]:
+	jitvals = []
+	for jit in [0.1]:#[0.0001,0.000316,0.001,0.00316,0.01,0.0316,0.1]:
+		tar_den = 0.001
 		mat_matrix = [[[0,0,0],
 					   [0,0,0],
 					   [0,0,0]],
@@ -65,9 +70,11 @@ for subdiv in range(8,9):
 					   [0,0,0]]]
 		#subdiv = 8
 		zheight = subdiv+1
+		pitchfactor = 1.05
 
 		#subdiving beams?
-		subdiv_beam = False
+		subdiv_beam = True
+		num_bsub = 20
 
 		#performing a solid-body rotation on the article?
 		rotate = False
@@ -76,6 +83,7 @@ for subdiv in range(8,9):
 		renormalize = True
 
 		notskipping = True
+		twod = True
 
 		#Subdivide the material matrix
 		dims = np.shape(mat_matrix)
@@ -103,7 +111,7 @@ for subdiv in range(8,9):
 		vox_pitch = 0.1016#/subdiv #m
 
 
-		node_radius = 0 
+		node_radius = 0
 
 		#STRUT PROPERTIES
 		#Physical Properties
@@ -136,14 +144,18 @@ for subdiv in range(8,9):
 		'''
 
 		#Node Map Population
-		#Referencing the geometry-specific file. 
+		#Referencing the geometry-specific file.
 
 		#nodes,frames,node_frame_map,dims = dschwarz.alt_from_material(mat_matrix,vox_pitch)
 		#frame_props["Le"] = dschwarz.alt_frame_length(vox_pitch)
-		#nodes,frames,node_frame_map,dims = cuboct.from_material(mat_matrix,vox_pitch)
-		#frame_props["Le"] = cuboct.frame_length(vox_pitch)
-		nodes,frames,node_frame_map,dims = cuboct_buckle.from_material(mat_matrix,vox_pitch)
-		frame_props["Le"] = cuboct_buckle.frame_length(vox_pitch)
+		#nodes,frames,node_frame_map,dims = pschwarz.from_material(mat_matrix,vox_pitch)
+		#frame_props["Le"] = pschwarz.frame_length(vox_pitch)
+		nodes,frames,node_frame_map,dims = cuboct.from_material(mat_matrix,vox_pitch)
+		frame_props["Le"] = cuboct.frame_length(vox_pitch)
+		#nodes,frames,node_frame_map,dims = octet.from_material(mat_matrix,vox_pitch)
+		#frame_props["Le"] = octet.frame_length(vox_pitch)
+		#nodes,frames,node_frame_map,dims = cuboct_buckle.from_material(mat_matrix,vox_pitch)
+		#frame_props["Le"] = cuboct_buckle.frame_length(vox_pitch)
 		#nodes,frames,node_frame_map,dims = cubic.from_material(mat_matrix,vox_pitch)
 		#frame_props["Le"] = cubic.frame_length(vox_pitch)
 		#nodes,frames,node_frame_map,dims = kelvin.from_material(mat_matrix,vox_pitch)
@@ -158,7 +170,7 @@ for subdiv in range(8,9):
 			k = [1,0,0]
 			K = np.array([[0,-k[2],k[1]],[k[2],0,-k[0]],[-k[1],k[0],0]])
 			angle = np.arctan(np.sqrt(2))
-			R = np.identity(3)+np.sin(angle)*K+(1-np.cos(angle))*np.dot(K,K) 
+			R = np.identity(3)+np.sin(angle)*K+(1-np.cos(angle))*np.dot(K,K)
 
 			newnodes = np.zeros(np.shape(nodes))
 			for i,node in enumerate(nodes):
@@ -166,7 +178,7 @@ for subdiv in range(8,9):
 
 			#Rezero the z-location of the structure
 			meanval = [np.mean(newnodes.T[0]),np.mean(newnodes.T[1]),np.mean(newnodes.T[2])]
-			
+
 			newnodes.T[0] = newnodes.T[0]-meanval[0]
 			newnodes.T[1] = newnodes.T[1]-meanval[1]
 			newnodes.T[2] = newnodes.T[2]-meanval[2]
@@ -182,7 +194,7 @@ for subdiv in range(8,9):
 			newnodes = np.zeros(np.shape(nodes))
 			nodemap = np.zeros(len(nodes))
 			newdex = 0
-			
+
 			for i,node in enumerate(nodes):
 				if np.sqrt(node[0]**2+node[1]**2) >= 0.5*subdiv*vox_pitch or np.abs(node[2]) - zheight/2.0*vox_pitch >= 0.02:
 					nodemap[i] = -1
@@ -199,14 +211,14 @@ for subdiv in range(8,9):
 						topframes.append([nodemap[frame[0]],nodemap[frame[1]]])
 					else:
 						newframes.append([nodemap[frame[0]],nodemap[frame[1]]])
-			
+
 			#print(topframes)
 			minval = [np.min(newnodes.T[0]),np.min(newnodes.T[1]),np.min(newnodes.T[2])]
 
 			newnodes.T[0] = newnodes.T[0]-minval[0]
 			newnodes.T[1] = newnodes.T[1]-minval[1]
 			newnodes.T[2] = newnodes.T[2]-minval[2]
-			
+
 			nodes = newnodes[0:newdex]
 			frames = newframes
 		else:
@@ -214,7 +226,7 @@ for subdiv in range(8,9):
 			newframes = []
 			zdim = maxval-vox_pitch
 			for i, frame in enumerate(frames):
-				if np.abs(nodes[frame[0]][2] - maxval) <= 0.27*vox_pitch*dims[2] and np.abs(nodes[frame[1]][2] - maxval) <= 0.27*vox_pitch*dims[2]:
+				if np.abs(nodes[frame[0]][2] - maxval) <= pitchfactor*vox_pitch*dims[2] and np.abs(nodes[frame[1]][2] - maxval) <= pitchfactor*vox_pitch*dims[2]:
 					topframes.append([frame[0],frame[1]])
 				else:
 					newframes.append([frame[0],frame[1]])
@@ -236,7 +248,7 @@ for subdiv in range(8,9):
 		rel_den = len(frames)*frame_props["d1"]*frame_props["d2"]*frame_props["Le"]/art_vol
 
 		#print(frame_props["d1"], " ", rel_den)
-		
+
 		minval = np.min(nodes.T[2])
 		maxval = np.max(nodes.T[2])
 
@@ -263,20 +275,19 @@ for subdiv in range(8,9):
 					if dof != 2:
 						constraints.append({'node':i,'DOF':dof, 'value':strains[dof]})
 					if dof == 2:
-						constraints.append({'node':i,'DOF':dof, 'value':-strain_disp})
-						#loads.append(      {'node':i,'DOF':dof, 'value':-loadval})
-			elif np.abs(node[2]-minval) < 0.27*vox_pitch:#0.005:
+						#constraints.append({'node':i,'DOF':dof, 'value':-strain_disp})
+						loads.append(      {'node':i,'DOF':dof, 'value':-loadval})
+			elif np.abs(node[2]-minval) < 0.005:# pitchfactor*vox_pitch:#0.005:
 				for dof in range(6):
 					constraints.append({'node':i,'DOF':dof, 'value':0})
 			else:
 				if np.abs(node[2]-maxval)-vox_pitch > 0.005:
 					jitter = np.random.rand(3)-0.5
-					jitter = jitter/np.linalg.norm(jitter)*frame_props["d1"]
-					#jitter[2] = 0 
-					#nodes[i][:] = node+jitter
-		
+					jitter = jitter/np.linalg.norm(jitter)*frame_props["d1"]*0.0
+					#jitter[2] = 0
+					nodes[i][:] = node+jitter
+
 		if subdiv_beam:
-			num_bsub = 2
 			frame_props["Le"] = frame_props["Le"]*1.0/(num_bsub+1)
 			newframes = list(frames)
 			tdex = len(nodes)
@@ -299,11 +310,11 @@ for subdiv in range(8,9):
 
 			frames = newframes
 
-		#print(frames)		
+		#print(frames)
 
 		#print(len(loads)*loadval)
 		#print(len(constraints),len(nodes)*6)
-				
+
 		'''
 		for x in range(1,subdiv+1):
 			for y in range(1,subdiv+1):
@@ -314,7 +325,7 @@ for subdiv in range(8,9):
 				constraints.append({'node':node_frame_map[x][y][1][0],'DOF':2, 'value':0})
 				constraints.append({'node':node_frame_map[x][y][1][0],'DOF':3, 'value':0})
 				constraints.append({'node':node_frame_map[x][y][1][0],'DOF':4, 'value':0})
-				constraints.append({'node':node_frame_map[x][y][1][0],'DOF':5, 'value':0})		
+				constraints.append({'node':node_frame_map[x][y][1][0],'DOF':5, 'value':0})
 				constraints.append({'node':node_frame_map[x][y][1][3],'DOF':0, 'value':0})
 				constraints.append({'node':node_frame_map[x][y][1][3],'DOF':1, 'value':0})
 				constraints.append({'node':node_frame_map[x][y][1][3],'DOF':2, 'value':0})
@@ -324,17 +335,17 @@ for subdiv in range(8,9):
 				#constraints.append({'node':node_frame_map[x][y][1][2],'DOF':3, 'value':0})
 				#constraints.append({'node':node_frame_map[x][y][1][2],'DOF':4, 'value':0})
 				#constraints.append({'node':node_frame_map[x][y][1][2],'DOF':5, 'value':0})
-				
+
 				#The top most nodes are assigned a z-axis load, as well as being
 				#constrained to translate in only the z-direction.
-				
+
 				constraints.append({'node':node_frame_map[x][y][subdiv][1],'DOF':0, 'value':0})
 				constraints.append({'node':node_frame_map[x][y][subdiv][1],'DOF':1, 'value':0})
 				constraints.append({'node':node_frame_map[x][y][subdiv][1],'DOF':2, 'value':-strain_disp})
 				constraints.append({'node':node_frame_map[x][y][subdiv][1],'DOF':3, 'value':0})
 				constraints.append({'node':node_frame_map[x][y][subdiv][1],'DOF':4, 'value':0})
 				constraints.append({'node':node_frame_map[x][y][subdiv][1],'DOF':5, 'value':0})
-				
+
 				constraints.append({'node':node_frame_map[x][y][subdiv][2],'DOF':0, 'value':0})
 				constraints.append({'node':node_frame_map[x][y][subdiv][2],'DOF':1, 'value':0})
 				constraints.append({'node':node_frame_map[x][y][subdiv][2],'DOF':2, 'value':-strain_disp})
@@ -355,7 +366,7 @@ for subdiv in range(8,9):
 				constraints.append({'node':node_frame_map[x][y][subdiv][2],'DOF':3, 'value':0})
 				constraints.append({'node':node_frame_map[x][y][subdiv][2],'DOF':4, 'value':0})
 				constraints.append({'node':node_frame_map[x][y][subdiv][2],'DOF':5, 'value':0})
-				
+
 		'''
 		#frames = cuboct.remove_frame([(int(size_x/2.0)+1,int(size_y/2.0)+1,int(size_z/2.0)+1),2],node_frame_map,frames)
 		#dframes = cuboct.remove_frame([(int(size_x/2.0)+1,int(size_y/2.0)+1,int(size_z/2.0)+1),5],node_frame_map,dframes)
@@ -363,14 +374,14 @@ for subdiv in range(8,9):
 		#print(len(loads))
 
 
-		 #####  ### #     #    ####### #     # ####### ######  #     # ####### 
-		#     #  #  ##   ##    #     # #     #    #    #     # #     #    #    
-		#        #  # # # #    #     # #     #    #    #     # #     #    #    
-		 #####   #  #  #  #    #     # #     #    #    ######  #     #    #    
-		      #  #  #     #    #     # #     #    #    #       #     #    #    
-		#     #  #  #     #    #     # #     #    #    #       #     #    #    
-		 #####  ### #     #    #######  #####     #    #        #####     #    
-		                                                                       
+		 #####  ### #     #    ####### #     # ####### ######  #     # #######
+		#     #  #  ##   ##    #     # #     #    #    #     # #     #    #
+		#        #  # # # #    #     # #     #    #    #     # #     #    #
+		 #####   #  #  #  #    #     # #     #    #    ######  #     #    #
+		      #  #  #     #    #     # #     #    #    #       #     #    #
+		#     #  #  #     #    #     # #     #    #    #       #     #    #
+		 #####  ### #     #    #######  #####     #    #        #####     #
+
 
 
 		#Group frames with their characteristic properties.
@@ -405,8 +416,8 @@ for subdiv in range(8,9):
 		#Format node positions
 		out_nodes = np.array(nodes)
 
-		#Global Arguments 
-		global_args = {'frame3dd_filename': "test",'length_scaling':1,"using_Frame3dd":False,"debug_plot":False,"gravity" : [0,0,0]}
+		#Global Arguments
+		global_args = {'frame3dd_filename': "test",'length_scaling':1,"using_Frame3dd":False,"debug_plot":True,"gravity" : [0,0,0]}
 		global_args["node_radius"] = np.zeros(len(nodes))+0.05*frame_props["Le"]
 		if global_args["using_Frame3dd"]:
 			frame3dd.write_frame3dd_file(out_nodes, global_args, out_frames, constraints,loads)
@@ -433,19 +444,26 @@ for subdiv in range(8,9):
 
 		top_disp = []
 		if notskipping:
+			'''
 			for constraint in constraints:
 				if constraint["value"] != 0:
 					tot_force = tot_force + C[constraint["node"]*6+constraint["DOF"]]
 					num_forced+=1
-			#for load in loads:
-			#	top_disp.append(res_displace[load["node"],load["DOF"]])
+			'''
+			for load in loads:
+				top_disp.append(res_displace[load["node"],load["DOF"]])
 			#struct_den = len(frames)*(0.5*frame_props["d1"])**2*np.pi*frame_props["Le"]/(vox_pitch**3*subdiv**3)
 			#print("Min/Max Z-displacement: {0} and {1}".format(np.max(top_disp),np.min(top_disp)))
-			print(subdiv,tot_force/(xdim*ydim*strain_disp/zdim),tar_den)
+			#print(subdiv,tot_force/(xdim*ydim*strain_disp/zdim),tar_den)
+			jitvals.append(len(loads)*loadval/(xdim*ydim*np.mean(top_disp)/zdim))
 			#print(subdiv,len(loads)*loadval/(xdim*ydim*np.mean(top_disp)/zdim),tar_den)
-			#modvals.append([tar_den,len(loads)*loadval/(xdim*ydim*np.mean(top_disp)/zdim)])
+			print("{0} of 10".format(jit+1))
+	jitvals = np.array(jitvals)
+	if notskipping:
+		print([subdiv,tar_den,np.mean(jitvals),np.std(jitvals)])
+		modvals.append([subdiv,tar_den,np.mean(jitvals),np.std(jitvals)])
 
-#print(modvals)
+print(modvals)
 
 if global_args["debug_plot"]:
 	### Right now the debug plot only does x-y-z displacements, no twisting
@@ -458,10 +476,13 @@ if global_args["debug_plot"]:
 	rzs = []
 
 	fig = plt.figure()
-	ax = fig.add_subplot(111, projection='3d')
+	if twod:	
+		ax = fig.add_subplot(111)
+	else:
+		ax = fig.add_subplot(111, projection='3d')
 	ax.set_aspect('equal')
 	frame_coords = []
-	factor = 100
+	factor = 1000
 
 	for i,node in enumerate(nodes):
 		xs.append(node[0])
@@ -473,12 +494,13 @@ if global_args["debug_plot"]:
 			rzs.append(node[2]+res_displace[i][2]*factor)
 
 	frame_args = out_frames[0][1]
-	
+
 	#if notskipping:
 		#st_nrg = 0.5*frame_args["Le"]/frame_args["E"]*(Q[:,0]**2/frame_args["Ax"]+Q[:,4]**2/frame_args["Iy"]+Q[:,5]**2/frame_args["Iz"])
 		#print(Q[:,0],st_nrg)
 		#qmax = np.max(st_nrg)
 	#print(qmax)
+
 	for i,frame in enumerate(frames):
 		nid1 = int(frame[0])
 		nid2 = int(frame[1])
@@ -487,11 +509,13 @@ if global_args["debug_plot"]:
 		if notskipping:
 			rstart = [rxs[nid1],rys[nid1],rzs[nid1]]
 			rend   = [rxs[nid2],rys[nid2],rzs[nid2]]
-			#ax.plot([rstart[1],rend[1]],[rstart[2],rend[2]],color='b', alpha=(0.25))#*st_nrg[i]/qmax)**2)
-			ax.plot([rstart[0],rend[0]],[rstart[1],rend[1]],[rstart[2],rend[2]],color='b', alpha=(1.0))#*st_nrg[i]/qmax)**2)
+			if(twod):
+				ax.plot([rstart[1],rend[1]],[rstart[2],rend[2]],color='b', alpha=(0.25))#*st_nrg[i]/qmax)**2)
+			else:
+				ax.plot([rstart[0],rend[0]],[rstart[1],rend[1]],[rstart[2],rend[2]],color='b', alpha=(1.0))#*st_nrg[i]/qmax)**2)
 
 		#ax.plot([start[0],end[0]],[start[1],end[1]],[start[2],end[2]],color='r', alpha=0.1)
-	
+
 	for i,frame in enumerate(topframes):
 		nid1 = int(frame[0])
 		nid2 = int(frame[1])
@@ -500,8 +524,10 @@ if global_args["debug_plot"]:
 		if notskipping:
 			rstart = [rxs[nid1],rys[nid1],rzs[nid1]]
 			rend   = [rxs[nid2],rys[nid2],rzs[nid2]]
-			#ax.plot([rstart[1],rend[1]],[rstart[2],rend[2]],color='k')#*st_nrg[i]/qmax)**2)
-			ax.plot([rstart[0],rend[0]],[rstart[1],rend[1]],[rstart[2],rend[2]],color='k', alpha=1.0)#(1.0*st_nrg[i]/qmax)**2)
+			if twod:
+				ax.plot([rstart[1],rend[1]],[rstart[2],rend[2]],color='k')#*st_nrg[i]/qmax)**2)
+			else:
+				ax.plot([rstart[0],rend[0]],[rstart[1],rend[1]],[rstart[2],rend[2]],color='k', alpha=1.0)#(1.0*st_nrg[i]/qmax)**2)
 	'''
 	xs = np.array(xs)
 	ys = np.array(ys)
@@ -528,15 +554,17 @@ if global_args["debug_plot"]:
 		lzs.append(nodes[lid][2])
 
 	for constraint in constraints:
-		cid = int(constraint["node"])		
+		cid = int(constraint["node"])
 		cxs.append(nodes[cid][0])
 		cys.append(nodes[cid][1])
 		czs.append(nodes[cid][2])
-	#ax.scatter(ys,zs, color='r',alpha=0.1)
-	
-	ax.scatter(xs,ys,zs, color='r',alpha=0.1)
+	if twod:
+		ax.scatter(ys,zs, color='r',alpha=0.1)
+	else:
+		ax.scatter(xs,ys,zs, color='r',alpha=0.1)
 	#ax.scatter(lxs,lys,lzs,color='m',alpha=1.0,s=40)
-	ax.scatter(cxs,cys,czs,color='k',alpha=1.0,s=40)
+	if not twod:
+		ax.scatter(cxs,cys,czs,color='k',alpha=1.0,s=40)
 	#ax.scatter(rxs,rys,rzs, color='b',alpha=0.3)
 	plt.show()
 	#print(frames)

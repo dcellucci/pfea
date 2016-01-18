@@ -13,37 +13,38 @@ from math import *
 import cuboct
 import cuboct_buckle
 import kelvin
+import pschwarz
+import octet
 
+######  #######  #####   #####  ######  ### ######  ####### ### ####### #     #
+#     # #       #     # #     # #     #  #  #     #    #     #  #     # ##    #
+#     # #       #       #       #     #  #  #     #    #     #  #     # # #   #
+#     # #####    #####  #       ######   #  ######     #     #  #     # #  #  #
+#     # #             # #       #   #    #  #          #     #  #     # #   # #
+#     # #       #     # #     # #    #   #  #          #     #  #     # #    ##
+######  #######  #####   #####  #     # ### #          #    ### ####### #     #
 
-######  #######  #####   #####  ######  ### ######  ####### ### ####### #     # 
-#     # #       #     # #     # #     #  #  #     #    #     #  #     # ##    # 
-#     # #       #       #       #     #  #  #     #    #     #  #     # # #   # 
-#     # #####    #####  #       ######   #  ######     #     #  #     # #  #  # 
-#     # #             # #       #   #    #  #          #     #  #     # #   # # 
-#     # #       #     # #     # #    #   #  #          #     #  #     # #    ## 
-######  #######  #####   #####  #     # ### #          #    ### ####### #     # 
-                                                                                
 # Use this file to test geometries, to make sure everything lines up
 # This file should just generate the node/frame positions for a given lattice, and plot them
 # good way to test functionality
 
 
-####### ######     #    #     # ####### 
-#       #     #   # #   ##   ## #       
-#       #     #  #   #  # # # # #       
-#####   ######  #     # #  #  # #####   
-#       #   #   ####### #     # #       
-#       #    #  #     # #     # #       
-#       #     # #     # #     # ####### 
-                                                 
-######  ####### ######  #     # #          #    ####### ### ####### #     # 
-#     # #     # #     # #     # #         # #      #     #  #     # ##    # 
-#     # #     # #     # #     # #        #   #     #     #  #     # # #   # 
-######  #     # ######  #     # #       #     #    #     #  #     # #  #  # 
-#       #     # #       #     # #       #######    #     #  #     # #   # # 
-#       #     # #       #     # #       #     #    #     #  #     # #    ## 
-#       ####### #        #####  ####### #     #    #    ### ####### #     # 
-                                                                            
+####### ######     #    #     # #######
+#       #     #   # #   ##   ## #
+#       #     #  #   #  # # # # #
+#####   ######  #     # #  #  # #####
+#       #   #   ####### #     # #
+#       #    #  #     # #     # #
+#       #     # #     # #     # #######
+
+######  ####### ######  #     # #          #    ####### ### ####### #     #
+#     # #     # #     # #     # #         # #      #     #  #     # ##    #
+#     # #     # #     # #     # #        #   #     #     #  #     # # #   #
+######  #     # ######  #     # #       #     #    #     #  #     # #  #  #
+#       #     # #       #     # #       #######    #     #  #     # #   # #
+#       #     # #       #     # #       #     #    #     #  #     # #    ##
+#       ####### #        #####  ####### #     #    #    ### ####### #     #
+
 
 #Temporary Material Matrix - NxNxN cubic grid (corresponding to cubic-octahedra)
 # at the moment:
@@ -88,13 +89,16 @@ if subdiv > 1:
 vox_pitch = 0.01/subdiv #m
 
 #Node Map Population
-#Referencing the geometry-specific file. 
+#Referencing the geometry-specific file.
 
 #nodes,frames,node_frame_map,dims = kelvin.from_material(mat_matrix,vox_pitch)
-nodes,frames,node_frame_map,dims = cuboct_buckle.from_material(mat_matrix,vox_pitch)
+#nodes,frames,node_frame_map,dims = cuboct_buckle.from_material(mat_matrix,vox_pitch)
+#nodes,frames,node_frame_map,dims = pschwarz.from_material(mat_matrix,vox_pitch)
+nodes,frames,node_frame_map,dims = octet.from_material(mat_matrix,vox_pitch)
 #print(node_frame_map)
 nodes = np.array(nodes)
-#print(nodes)
+print(len(nodes))
+print(len(frames))
 if subdiv_beam:
 	num_bsub = 2
 	#frame_props["Le"] = frame_props["Le"]*1.0/(num_bsub+1)
@@ -144,7 +148,7 @@ for i,frame in enumerate(frames):
 		start = [xs[nid1],ys[nid1],zs[nid1]]
 		end   = [xs[nid2],ys[nid2],zs[nid2]]
 		ax.plot([start[0],end[0]],[start[1],end[1]],[start[2],end[2]],color='r', alpha=0.1)
-	
+
 #plot the nodes
 ax.scatter(xs,ys,zs)
 
