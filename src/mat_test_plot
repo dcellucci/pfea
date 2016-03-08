@@ -1,7 +1,0 @@
-import matplotlib.pyplot as plt
-import matplotlib
-
-fig = plt.figure()
-ax = fig.add_subplot(111)
-ax.plot([0,0],[0,1])
-plt.show()
