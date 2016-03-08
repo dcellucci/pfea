@@ -1,5 +1,5 @@
 import numpy as np
-
+import latticegen
 
 #Geometric Properties
 
@@ -155,6 +155,13 @@ def from_material(mat_matrix,vox_pitch):
 					#The bottom-most nodes are constrained to neither translate nor
 					#rotate
 	return nodes,frames,node_frame_map,uc_dims
+
+def gen_111(hex_radius,hex_height,vox_pitch):
+	offset = np.array([0.25,0.25,0.25])
+	debug,mat_matrix,invol = latticegen.cubic_to_111(hex_radius,hex_height,np.array(node_locs),np.array(frame_locs),offset)
+	nodes,frames,node_frame_map,dims = from_material(mat_matrix,vox_pitch)
+
+	return latticegen.crop_framework(nodes,frames,node_frame_map,invol)
 
 def frame_length(vox_pitch):
 	return 1.0*vox_pitch/np.sqrt(2.0)

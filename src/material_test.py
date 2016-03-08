@@ -29,7 +29,7 @@ from math import *
 
 # Performs a standard modulus sweep for a lattice.
 # We should see a monotonically increasing modulus, as we
-# increased the normalized cell dimension
+# increased the resolution of the lattice
 
 
 ####### ######     #    #     # #######
@@ -54,11 +54,20 @@ from math import *
 # 1's correspond to material being there
 # 0's correspond to no material
 
+
+
 modvals = []
+#Subdiv is the amount of subdivision
+#We split a cube into Subdiv^3 subdivisions
+
 for subdiv in range(8,9):
+	
 	jitvals = []
-	for jit in [0.1]:#[0.0001,0.000316,0.001,0.00316,0.01,0.0316,0.1]:
-		tar_den = 0.001
+	
+	for jit in [0.0]:#[0.0001,0.000316,0.001,0.00316,0.01,0.0316,0.1]:
+		
+		tar_den = 0.01
+
 		mat_matrix = [[[0,0,0],
 					   [0,0,0],
 					   [0,0,0]],
@@ -73,8 +82,8 @@ for subdiv in range(8,9):
 		pitchfactor = 1.05
 
 		#subdiving beams?
-		subdiv_beam = True
-		num_bsub = 20
+		subdiv_beam = False
+		num_bsub = 6
 
 		#performing a solid-body rotation on the article?
 		rotate = False
@@ -108,7 +117,7 @@ for subdiv in range(8,9):
 		# Material Properties
 		#for pitchfactor in [0.1,0.5,0.75,1.0,1.5,2.0,3.0]
 		#Physical Voxel Properties
-		vox_pitch = 0.1016#/subdiv #m
+		vox_pitch = 0.00854#/subdiv #m
 
 
 		node_radius = 0
@@ -119,11 +128,11 @@ for subdiv in range(8,9):
 		#Using Newtons, meters, and kilograms as the units
 
 		frame_props = {"nu"  : 0.35, #poisson's ratio
-					   "d1"	 : 0.00238, #m
-					   "d2"	 : 0.00238, #m
+					   "d1"	 : 0.000762, #m
+					   "d2"	 : 0.000762, #m
 					   "th"  : 0,
-					   "E"   :  3000000000, #N/m^2,
-					   "rho" :  1400, #kg/m^3
+					   "E"   :  11e9, #N/m^2,
+					   "rho" :  1650, #kg/m^3
 					   "beam_divisions" : 0,
 					   "cross_section"  : 'rectangular',
 					   "roll": 0}
@@ -146,12 +155,12 @@ for subdiv in range(8,9):
 		#Node Map Population
 		#Referencing the geometry-specific file.
 
-		#nodes,frames,node_frame_map,dims = dschwarz.alt_from_material(mat_matrix,vox_pitch)
-		#frame_props["Le"] = dschwarz.alt_frame_length(vox_pitch)
+		nodes,frames,node_frame_map,dims = dschwarz.from_material(mat_matrix,vox_pitch)
+		frame_props["Le"] = dschwarz.frame_length(vox_pitch)
 		#nodes,frames,node_frame_map,dims = pschwarz.from_material(mat_matrix,vox_pitch)
 		#frame_props["Le"] = pschwarz.frame_length(vox_pitch)
-		nodes,frames,node_frame_map,dims = cuboct.from_material(mat_matrix,vox_pitch)
-		frame_props["Le"] = cuboct.frame_length(vox_pitch)
+		#nodes,frames,node_frame_map,dims = cuboct.from_material(mat_matrix,vox_pitch)
+		#frame_props["Le"] = cuboct.frame_length(vox_pitch)
 		#nodes,frames,node_frame_map,dims = octet.from_material(mat_matrix,vox_pitch)
 		#frame_props["Le"] = octet.frame_length(vox_pitch)
 		#nodes,frames,node_frame_map,dims = cuboct_buckle.from_material(mat_matrix,vox_pitch)
@@ -162,6 +171,7 @@ for subdiv in range(8,9):
 		#frame_props["Le"] = kelvin.frame_length(vox_pitch)
 
 		nodes = np.array(nodes)
+		
 		#rotation of the structure so it's properly oriented
 		#Using Rodrigues' rotation formula
 		topframes = []
@@ -233,6 +243,10 @@ for subdiv in range(8,9):
 
 		frames = newframes
 
+		maxval = np.max(nodes.T[2])
+		minval = np.min(nodes.T[2])
+		zdim = maxval-minval-vox_pitch
+
 		#renormalize beam cross section to keep the same relative density
 		xdim = np.max(nodes.T[0])-np.min(nodes.T[0])
 		ydim = np.max(nodes.T[1])-np.min(nodes.T[1])
@@ -247,7 +261,7 @@ for subdiv in range(8,9):
 
 		rel_den = len(frames)*frame_props["d1"]*frame_props["d2"]*frame_props["Le"]/art_vol
 
-		#print(frame_props["d1"], " ", rel_den)
+		print(frame_props["d1"], " ", rel_den)
 
 		minval = np.min(nodes.T[2])
 		maxval = np.max(nodes.T[2])
@@ -267,7 +281,7 @@ for subdiv in range(8,9):
 		maxval = np.max(nodes.T[2])
 
 
-
+		
 		for i,node in enumerate(nodes):
 			#print(node)
 			if np.abs(node[2]-maxval)< 0.005:
@@ -285,8 +299,8 @@ for subdiv in range(8,9):
 					jitter = np.random.rand(3)-0.5
 					jitter = jitter/np.linalg.norm(jitter)*frame_props["d1"]*0.0
 					#jitter[2] = 0
-					nodes[i][:] = node+jitter
-
+					#nodes[i][:] = node+jitter
+		
 		if subdiv_beam:
 			frame_props["Le"] = frame_props["Le"]*1.0/(num_bsub+1)
 			newframes = list(frames)
@@ -455,12 +469,14 @@ for subdiv in range(8,9):
 			#struct_den = len(frames)*(0.5*frame_props["d1"])**2*np.pi*frame_props["Le"]/(vox_pitch**3*subdiv**3)
 			#print("Min/Max Z-displacement: {0} and {1}".format(np.max(top_disp),np.min(top_disp)))
 			#print(subdiv,tot_force/(xdim*ydim*strain_disp/zdim),tar_den)
+			print("Number of loaded nodes")
+			print(len(loads))
 			jitvals.append(len(loads)*loadval/(xdim*ydim*np.mean(top_disp)/zdim))
 			#print(subdiv,len(loads)*loadval/(xdim*ydim*np.mean(top_disp)/zdim),tar_den)
-			print("{0} of 10".format(jit+1))
+			#print("{0} of 10".format(jit+1))
 	jitvals = np.array(jitvals)
 	if notskipping:
-		print([subdiv,tar_den,np.mean(jitvals),np.std(jitvals)])
+		print([subdiv,tar_den,np.mean(jitvals),np.mean(top_disp)])
 		modvals.append([subdiv,tar_den,np.mean(jitvals),np.std(jitvals)])
 
 print(modvals)
@@ -482,7 +498,7 @@ if global_args["debug_plot"]:
 		ax = fig.add_subplot(111, projection='3d')
 	ax.set_aspect('equal')
 	frame_coords = []
-	factor = 1000
+	factor = 10
 
 	for i,node in enumerate(nodes):
 		xs.append(node[0])

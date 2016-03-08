@@ -14,6 +14,7 @@ import cuboct
 import cuboct_buckle
 import kelvin
 import pschwarz
+import dschwarz
 import octet
 
 ######  #######  #####   #####  ######  ### ######  ####### ### ####### #     #
@@ -62,7 +63,7 @@ mat_matrix = [[[0,0,0],
 			   [0,0,0],
 			   [0,0,0]]]
 
-subdiv = 2
+subdiv = 3
 zheight = subdiv
 subdiv_beam = False
 #Subdivide the material matrix
@@ -94,11 +95,19 @@ vox_pitch = 0.01/subdiv #m
 #nodes,frames,node_frame_map,dims = kelvin.from_material(mat_matrix,vox_pitch)
 #nodes,frames,node_frame_map,dims = cuboct_buckle.from_material(mat_matrix,vox_pitch)
 #nodes,frames,node_frame_map,dims = pschwarz.from_material(mat_matrix,vox_pitch)
-nodes,frames,node_frame_map,dims = octet.from_material(mat_matrix,vox_pitch)
-#print(node_frame_map)
+nodes,frames,node_frame_map,dims = dschwarz.from_material(mat_matrix,vox_pitch)
+#nodes,frames,node_frame_map,dims = octet.from_material(mat_matrix,vox_pitch)
+
+
 nodes = np.array(nodes)
-print(len(nodes))
-print(len(frames))
+
+
+for i,node in enumerate(nodes):
+	tform = np.array([[1.0/6*(3+np.sqrt(3)),1.0/6*(-3+np.sqrt(3)),1.0/sqrt(3)],
+					  [1.0/6*(-3+np.sqrt(3)),1.0/6*(3+np.sqrt(3)),1.0/sqrt(3)],
+					  [-1.0/sqrt(3),-1.0/sqrt(3),1.0/sqrt(3)]])
+	nodes[i] = np.dot(tform,node)
+
 if subdiv_beam:
 	num_bsub = 2
 	#frame_props["Le"] = frame_props["Le"]*1.0/(num_bsub+1)
