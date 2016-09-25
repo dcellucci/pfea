@@ -3,14 +3,13 @@ try:
 except ImportError:
     pass
 
-from distutils.core import setup
+from setuptools import setup
 
 setup(name='pfea',
 	version='1.0',
 	description='Tools for Generating and Simulating Cellular Solids',
-	author='Daniel Cellucci',
+	author='Daniel Cellucci & Nick Cramer',
 	url='https://github.com/dcellucci/pfea',
-	package_dir={'pfea': 'src'},
 	packages=['pfea','pfea.geom','pfea.util'],
 	install_requires=[
 		'numpy',
