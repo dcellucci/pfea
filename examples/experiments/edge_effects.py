@@ -2,12 +2,14 @@ import matplotlib.pyplot as plt
 import matplotlib
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
-import frame3dd
 import subprocess
-import pfea
 import cProfile
-import cuboct
 from math import *
+
+import pfea
+import pfea.frame3dd
+import pfea.solver
+import pfea.geom.cuboct as cuboct
 
 
 ####### ######     #    #     # ####### 
@@ -77,7 +79,7 @@ frame_props = {"nu"  : 0.33, #poisson's ratio
 #Future versions might have different files?
 
 node_frame_map = np.zeros((size_x,size_y,size_z,6))
-nodes,frames,node_frame_map = cuboct.from_material(mat_matrix,vox_pitch)
+nodes,frames,node_frame_map,temp = cuboct.from_material(mat_matrix,vox_pitch)
 
 
 num_nodes = size_x*size_y*2 + size_x + size_y
@@ -215,7 +217,7 @@ out_frames = [(np.array(frames),{'E'   : frame_props["E"],
 out_nodes = np.array(nodes)
 
 #Global Arguments 
-global_args = {'frame3dd_filename': "test", 'length_scaling':1,"using_Frame3dd":False,"debug_plot":True}
+global_args = {'frame3dd_filename': "test", 'length_scaling':1,"using_Frame3dd":False,"debug_plot":True,"gravity":[0,0,0]}
 
 if global_args["using_Frame3dd"]:
 	frame3dd.write_frame3dd_file(out_nodes, global_args, out_frames, constraints,loads)
@@ -224,14 +226,14 @@ if global_args["using_Frame3dd"]:
 	res_displace = frame3dd.read_frame3dd_displacements(global_args["frame3dd_filename"])
 else:
 	#displace = pfea.analyze_System(out_nodes, global_args, out_frames, constraints,loads)
-	cProfile.run('res_displace,res_reactions = pfea.analyze_System(out_nodes, global_args, out_frames, constraints,loads)')
+	cProfile.run('res_displace,C,Q = pfea.solver.analyze_System(out_nodes, global_args, out_frames, constraints,loads)')
 	#def_displace = pfea.analyze_System(out_nodes, global_args, def_frames, constraints,loads)
 #print(res_displace[node_frame_map[int(size_x/2.0)+1][int(size_y/2.0)+1][size_z][4]][2])
 #print(res_displace[node_frame_map[int(size_x/2.0)+1][int(size_y/2.0)+1][size_z][4]][2]/(size_z*vox_pitch))
 
 top_f_mag = np.zeros((size_x,size_y,3))
 tot_force = 0
-print(np.shape(res_reactions))
+#print(np.shape(res_reactions))
 
 for i in range(1,size_x+1):
 	for j in range(1,size_y+1):
