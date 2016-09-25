@@ -1,14 +1,15 @@
-import matplotlib.pyplot as plt
-import matplotlib
-from mpl_toolkits.mplot3d import Axes3D
+#import matplotlib.pyplot as plt
+#import matplotlib
+#from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
-import frame3dd
 import subprocess
 import pfea
 import cProfile
-import dschwarz
-import cuboct
-import kelvin
+import pfea.frame3dd
+import pfea.geom.dschwarz
+import pfea.geom.cuboct
+import pfea.geom.kelvin
+import pfea.solver
 from math import *
 
 
@@ -29,31 +30,27 @@ from math import *
 #       ####### #        #####  ####### #     #    #    ### ####### #     # 
                                                                             
 
-#Temporary Material Matrix - NxNxN cubic grid (corresponding to cubic-octahedra)
+#Default Material Matrix - NxNxN cubic grid 
 # at the moment:
 # 1's correspond to material being there
 # 0's correspond to no material
+# other integers can correspond to different voxel properties
 
-'''
-size = 3
+#subdivision method- structures are defined at the coarsest
+#resolution, each voxel is then subdivided into subdiv*subdiv*subdiv
+#voxels whose material value equals the parent value.
+# So  if subdiv = 2
+#				 	0 0 0 0 0 0 
+# 0 0 0   becomes 	0 0 0 0 0 0 
+# 0 1 0          	0 0 1 1 0 0 
+# 0 0 0			 	0 0 1 1 0 0
+#				 	0 0 0 0 0 0
+#				 	0 0 0 0 0 0 
 
-size_x = size
-size_y = size
-size_z = size
-mat_matrix = []
-for i in range(0,size_x+2):
-	tempcol = []
-	for j in range(0,size_y+2):
-		tempdep = [1]*(size_z+1)
-		tempdep.append(0)
-		tempdep[0] = 0
-		if(i*j*(i-(size_x+1))*(j-(size_y+1)) == 0):
-			tempdep = [0]*(size_z+2)
-		tempcol.append(tempdep)
-	mat_matrix.append(tempcol)
-'''
+
+
 vals = []
-for subdiv in range(2,10,2):
+for subdiv in range(1,2):
 	zheightvals = []
 	for aspratio in range(1,2):
 		mat_matrix = [[[0,0,0],
@@ -127,10 +124,14 @@ for subdiv in range(2,10,2):
 		#Future versions might have different files?
 
 		#node_frame_map = np.zeros((subdiv,subdiv,subdiv,6))
-		nodes,frames,node_frame_map,dims = kelvin.from_material(mat_matrix,vox_pitch)
-		print(node_frame_map.shape)
-		frame_props["Le"] = kelvin.frame_length(vox_pitch)
-
+		#nodes,frames,node_frame_map,dims = kelvin.from_material(mat_matrix,vox_pitch)
+		#print(node_frame_map.shape)
+		#frame_props["Le"] = kelvin.frame_length(vox_pitch)
+		
+		
+		nodes,frames,node_frame_map,dims = pfea.geom.cuboct.from_material(mat_matrix,vox_pitch)
+		#print(node_frame_map.shape)
+		frame_props["Le"] = pfea.geom.cuboct.frame_length(vox_pitch)
 		strain = 0.0001
 
 		strain_disp = zheight*vox_pitch*strain
@@ -164,14 +165,14 @@ for subdiv in range(2,10,2):
 		#dframes = cuboct.remove_frame([(int(size_x/2.0)+1,int(size_y/2.0)+1,int(size_z/2.0)+1),5],node_frame_map,dframes)
 
 
-
 		 #####  ### #     #    ####### #     # ####### ######  #     # ####### 
 		#     #  #  ##   ##    #     # #     #    #    #     # #     #    #    
 		#        #  # # # #    #     # #     #    #    #     # #     #    #    
 		 #####   #  #  #  #    #     # #     #    #    ######  #     #    #    
 		      #  #  #     #    #     # #     #    #    #       #     #    #    
 		#     #  #  #     #    #     # #     #    #    #       #     #    #    
-		 #####  ### #     #    #######  #####     #    #        #####     #    
+		 #####  ### #     #    #######  #####     #    #        #####     #  
+ 
 		                                                                       
 
 
@@ -193,7 +194,7 @@ for subdiv in range(2,10,2):
 		out_nodes = np.array(nodes)
 
 		#Global Arguments 
-		global_args = {'frame3dd_filename': "test", 'length_scaling':1,"using_Frame3dd":False,"debug_plot":True, "gravity" : [0,0,0]}
+		global_args = {'frame3dd_filename': "test", 'length_scaling':1,"using_Frame3dd":False,"debug_plot":False, "gravity" : [0,0,0]}
 
 		if global_args["using_Frame3dd"]:
 			frame3dd.write_frame3dd_file(out_nodes, global_args, out_frames, constraints,loads)
@@ -201,7 +202,7 @@ for subdiv in range(2,10,2):
 			res_nodes, res_reactions = frame3dd.read_frame3dd_results(global_args["frame3dd_filename"])
 			res_displace = frame3dd.read_frame3dd_displacements(global_args["frame3dd_filename"])
 		else:
-			res_displace,C,Q = pfea.analyze_System(out_nodes, global_args, out_frames, constraints,loads)
+			res_displace,C,Q = pfea.solver.analyze_System(out_nodes, global_args, out_frames, constraints,loads)
 			#cProfile.run('res_displace,C,Q = pfea.analyze_System(out_nodes, global_args, out_frames, constraints,loads)')
 			#def_displace = pfea.analyze_System(out_nodes, global_args, def_frames, constraints,loads)
 
@@ -215,6 +216,17 @@ for subdiv in range(2,10,2):
 		print(zheight,tot_force/(subdiv*vox_pitch)**2/(strain))
 	vals.append([subdiv,zheightvals])
 print(vals)
+
+
+ 
+
+######  ####### ######  #     #  #####  
+#     # #       #     # #     # #     # 
+#     # #       #     # #     # #       
+#     # #####   ######  #     # #  #### 
+#     # #       #     # #     # #     # 
+#     # #       #     # #     # #     # 
+######  ####### ######   #####   #####  
 
 if global_args["debug_plot"]:
 	### Right now the debug plot only does x-y-z displacements, no twisting

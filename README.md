@@ -12,3 +12,10 @@ Utilities for interfacing to the original Frame3DD library.
 
 ### NB
 The 'font' is Banner from http://www.network-science.de/ascii/
+
+For testing package installs, `virtualenv` is recommended.
+(In the pfea folder)
+
+    virtualenv ~/virtenv/
+    . ~/virtenv/bin/activate
+    python setup.py install

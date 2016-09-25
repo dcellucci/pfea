@@ -1,21 +1,15 @@
-import matplotlib.pyplot as plt
-import matplotlib
-from mpl_toolkits.mplot3d import Axes3D
+#import matplotlib.pyplot as plt
+#import matplotlib
+#from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
-import frame3dd
+from pfea import frame3dd
 import subprocess
-import pfea
+from pfea import pfea
 import cProfile
-import latticegen
+from pfea.geom import latticegen
 
 #Geometry Imports
-import dschwarz
-import pschwarz
-import cuboct
-import cuboct_buckle
-import cubic
-import kelvin
-import octet
+from pfea.geom import dschwarz
 
 from math import *
 
@@ -50,9 +44,9 @@ from math import *
 #       ####### #        #####  ####### #     #    #    ### ####### #     #
 
 output =[] 
-for param in range(2,6):
-	vox_pitch = 0.02 #m
-	tar_den = 0.1
+for param in np.arange(2,6.5,0.5):
+	vox_pitch = 0.011 #m
+	tar_den = 0.01
 
 	hex_radius = param
 	hex_height = param
@@ -90,10 +84,10 @@ for param in range(2,6):
 	#Node Map Population
 	#Referencing the geometry-specific file.
 
-	#nodes,frames= dschwarz.gen_111(hex_radius,hex_height,vox_pitch)
-	#frame_props["Le"] = dschwarz.frame_length(vox_pitch)
-	nodes,frames= pschwarz.gen_111(hex_radius,hex_height,vox_pitch)
-	frame_props["Le"] = pschwarz.frame_length(vox_pitch)
+	nodes,frames= dschwarz.gen_111(hex_radius,hex_height,vox_pitch)
+	frame_props["Le"] = dschwarz.frame_length(vox_pitch)
+	#nodes,frames= pschwarz.gen_111(hex_radius,hex_height,vox_pitch)
+	#frame_props["Le"] = pschwarz.frame_length(vox_pitch)
 	#nodes,frames= octet.gen_111(hex_radius,hex_height,vox_pitch)
 	#frame_props["Le"] = octet.frame_length(vox_pitch)
 	#nodes,frames= kelvin.gen_111(hex_radius,hex_height,vox_pitch)
@@ -288,6 +282,7 @@ for param in range(2,6):
 
 print(output)
 
+'''
 if global_args["debug_plot"]:
 	### Right now the debug plot only does x-y-z displacements, no twisting
 	xs = []
@@ -351,7 +346,7 @@ if global_args["debug_plot"]:
 				ax.plot([rstart[1],rend[1]],[rstart[2],rend[2]],color='k')#*st_nrg[i]/qmax)**2)
 			else:
 				ax.plot([rstart[0],rend[0]],[rstart[1],rend[1]],[rstart[2],rend[2]],color='k', alpha=1.0)#(1.0*st_nrg[i]/qmax)**2)
-	'''
+	
 	xs = np.array(xs)
 	ys = np.array(ys)
 	zs = np.array(zs)
@@ -362,7 +357,7 @@ if global_args["debug_plot"]:
 	# Comment or uncomment following both lines to test the fake bounding box:
 	for xb, yb, zb in zip(Xb, Yb, Zb):
 	   ax.plot([xb], [yb], [zb], 'w')
-	'''
+	
 	lxs = []
 	lys = []
 	lzs = []
@@ -391,3 +386,4 @@ if global_args["debug_plot"]:
 	#ax.scatter(rxs,rys,rzs, color='b',alpha=0.3)
 	plt.show()
 	#print(frames)
+'''
