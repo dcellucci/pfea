@@ -178,5 +178,63 @@ def gen_Node_map(nodes,constraints):
                     index=index+1
 
 
-    return co.spmatrix(data,row,col) 
+    return co.spmatrix(data,row,col)
+
+def plotLattice(nodes,frames,res_displace,scale):
+    # Function to plot the intial lattice configuration
+    # and the final version of the lattice configuration
+    #
+    # Input:    nodes - Initial node location
+    #           frames - node frames
+    #           res_displace - displacement of nodes
+    #           scale - scaling parameter
+    
+    #intialize arrays
+    xs = []
+    ys = []
+    zs = []
+    
+    rxs = []
+    rys = []
+    rzs = []
+    
+    #create plot
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_aspect('equal')
+    frame_coords = []
+
+    #poplate x, y, and z start and displacement arrays
+    for i,node in enumerate(nodes):
+	xs.append(node[0])
+	ys.append(node[1])
+	zs.append(node[2])
+	rxs.append(node[0]+res_displace[i][0]*scale)
+	rys.append(node[1]+res_displace[i][1]*scale)
+	rzs.append(node[2]+res_displace[i][2]*scale)
+
+    # Add frame
+    for i,frame in enumerate(frames):
+	nid1 = int(frame[0])
+	nid2 = int(frame[1])
+	start = [xs[nid1],ys[nid1],zs[nid1]]
+	end   = [xs[nid2],ys[nid2],zs[nid2]]
+	rstart = [rxs[nid1],rys[nid1],rzs[nid1]]
+	rend   = [rxs[nid2],rys[nid2],rzs[nid2]]
+	ax.plot([start[0],end[0]],[start[1],end[1]],[start[2],end[2]],color='r', alpha=0.1)
+	ax.plot([rstart[0],rend[0]],[rstart[1],rend[1]],[rstart[2],rend[2]],color='b', alpha=0.3)
+
+    #plot
+    ax.scatter(xs,ys,zs, color='r',alpha=0.1)
+    ax.scatter(rxs,rys,rzs, color='b',alpha=0.3)
+    plt.show()
+
+def writeCSV(nodes,res_displace,filename):
+    with open(filename, 'wb') as csvfile:
+        spamwriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        spamwriter.writerow(['X Start,Y Start,Z Start,X Rot,Y Rot,Z Rot,X Disp,Y Disp,Z Disp,X Rot Disp,Y Rot Disp,Z Rot Disp'])
+        for i,node in enumerate(nodes):
+            # Note that for now I have it so the rotation is always zero to intialize. I think that the current iteration of the solver has this requirement as well
+            # it might be useful to adapt this later
+            spamwriter.writerow([node[0]]+[node[1]]+[node[2]]+[0.0]+[0.0]+[0.0]+[res_displace[i][0]]+[res_displace[i][1]]+[res_displace[i][2]]+[res_displace[i][3]]+[res_displace[i][4]]+[res_displace[i][5]])
 
