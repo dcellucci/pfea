@@ -440,22 +440,25 @@ def solve_system(K,nodemap,D,forces,con_dof):
 #       ####### #     #  #####  #######  #####  
                                                 
 
-def assemble_loads(loads,constraints,nodes, beam_sets,global_args,tot_dof,length_scaling):
+def assemble_loads(mech_loads,therm_loads,constraints,nodes, beam_sets,global_args,tot_dof,length_scaling):
 	# creates force vector b
 	# Nodal Loads
 	# virtual loads from prescribed displacements
-	forces = co.matrix(0.0,(tot_dof,1))#np.zeros(tot_dof)
+	F_mech = co.matrix(0.0,(tot_dof,1))#np.zeros(tot_dof)
 	dP = co.matrix(0.0,(tot_dof,1))#np.zeros(tot_dof)
 
 	grav = np.array(global_args["gravity"])
 
 	#Loads from specified nodal loads
-	for load in loads:
-		forces[6*load['node']+load['DOF']] = load['value']
+	for mech_load in mech_loads:
+		F_mech[6*load['node']+load['DOF']] = load['value']
 
+
+	#Loads from gravity (self-weight)
 	if np.linalg.norm(grav) > 0:
 		for beamset,args in beam_sets:
 			rho = args["rho"]
+			#NB: Node mass isn't included in Frame3dd. 
 			node_mass = args["node_mass"]
 			Ax = args["Ax"]
 			L = args["Le"] 
@@ -466,26 +469,31 @@ def assemble_loads(loads,constraints,nodes, beam_sets,global_args,tot_dof,length
 				tr = t[6:9]
 				
 				mom = np.cross(np.cross(tq,tr),grav)
-				forces[6*beam[0]+0] += (0.5*rho*Ax*L+node_mass)*grav[0]
-				forces[6*beam[0]+1] += (0.5*rho*Ax*L+node_mass)*grav[1] 
-				forces[6*beam[0]+2] += (0.5*rho*Ax*L+node_mass)*grav[2]
+				F_mech[6*beam[0]+0] += (0.5*rho*Ax*L+node_mass)*grav[0]
+				F_mech[6*beam[0]+1] += (0.5*rho*Ax*L+node_mass)*grav[1] 
+				F_mech[6*beam[0]+2] += (0.5*rho*Ax*L+node_mass)*grav[2]
 
-				forces[6*beam[1]+0] += (0.5*rho*Ax*L+node_mass)*grav[0]
-				forces[6*beam[1]+1] += (0.5*rho*Ax*L+node_mass)*grav[1] 
-				forces[6*beam[1]+2] += (0.5*rho*Ax*L+node_mass)*grav[2]
+				F_mech[6*beam[1]+0] += (0.5*rho*Ax*L+node_mass)*grav[0]
+				F_mech[6*beam[1]+1] += (0.5*rho*Ax*L+node_mass)*grav[1] 
+				F_mech[6*beam[1]+2] += (0.5*rho*Ax*L+node_mass)*grav[2]
 
-				forces[6*beam[0]+3] += ( 1.0/12.0*rho*Ax*L*L)*mom[0]
-				forces[6*beam[0]+4] += ( 1.0/12.0*rho*Ax*L*L)*mom[1]
-				forces[6*beam[0]+5] += ( 1.0/12.0*rho*Ax*L*L)*mom[2]
+				F_mech[6*beam[0]+3] += ( 1.0/12.0*rho*Ax*L*L)*mom[0]
+				F_mech[6*beam[0]+4] += ( 1.0/12.0*rho*Ax*L*L)*mom[1]
+				F_mech[6*beam[0]+5] += ( 1.0/12.0*rho*Ax*L*L)*mom[2]
 
-				forces[6*beam[1]+3] += (-1.0/12.0*rho*Ax*L*L)*mom[0]
-				forces[6*beam[1]+4] += (-1.0/12.0*rho*Ax*L*L)*mom[1]
-				forces[6*beam[1]+5] += (-1.0/12.0*rho*Ax*L*L)*mom[2]
+				F_mech[6*beam[1]+3] += (-1.0/12.0*rho*Ax*L*L)*mom[0]
+				F_mech[6*beam[1]+4] += (-1.0/12.0*rho*Ax*L*L)*mom[1]
+				F_mech[6*beam[1]+5] += (-1.0/12.0*rho*Ax*L*L)*mom[2]
+	
+	#Calculate thermal forces from thermal loads
+	for therm_load in therm_loads:
+		
 
+	#Add Constraints
 	for constraint in constraints:
 		dP[int(6*constraint['node']+constraint['DOF'])] = constraint['value']*length_scaling
 
-	return forces,dP
+	return F_mech,dP
 
 def element_end_forces(nodes,Q,beam_sets,D):
 
@@ -869,6 +877,7 @@ def analyze_System(nodes, global_args, beam_sets, constraints,loads):
 	#Part 2
 	#This is where we'll solve for the displacements that occur
 	#due to temperature loads
+	
 
 	#Part 3
 	#We first calculate the frame element end forces due to 
@@ -878,7 +887,7 @@ def analyze_System(nodes, global_args, beam_sets, constraints,loads):
 	#Part 4
 	#Calculate the node displacements due to mechanical loads
 	#as well as prescribed node displacements
-	F,dP = assemble_loads(loads,constraints,nodes,beam_sets,global_args,tot_dof,length_scaling)
+	F,dP = assemble_loads(loads,Null,constraints,nodes,beam_sets,global_args,tot_dof,length_scaling)
 	dD = dP
 	C  = np.zeros(tot_dof)
 	dD,C = solve_system(K,node_map,dD,F,con_dof)

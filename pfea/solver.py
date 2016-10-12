@@ -440,21 +440,22 @@ def solve_system(K,nodemap,D,forces,con_dof):
 #       ####### #     #  #####  #######  #####  
                                                 
 
-def assemble_loads(loads,constraints,nodes, beam_sets,global_args,tot_dof,length_scaling):
+def assemble_loads(nodalloads,constraints,nodes, beamsets,global_args,tot_dof,length_scaling):
 	# creates force vector b
 	# Nodal Loads
 	# virtual loads from prescribed displacements
-	forces = co.matrix(0.0,(tot_dof,1))#np.zeros(tot_dof)
+	mech_forces = co.matrix(0.0,(tot_dof,1))#np.zeros(tot_dof)
+	therm_forces = co.matrix(0.0,(tot_dof,1))#np.zeros(tot_dof)
 	dP = co.matrix(0.0,(tot_dof,1))#np.zeros(tot_dof)
 
 	grav = np.array(global_args["gravity"])
 
 	#Loads from specified nodal loads
-	for load in loads:
-		forces[6*load['node']+load['DOF']] = load['value']
+	for nodalload in nodalloads:
+		mech_forces[6*load['node']+load['DOF']] = load['value']
 
 	if np.linalg.norm(grav) > 0:
-		for beamset,args in beam_sets:
+		for beamset,beamloads,args in beamsets:
 			rho = args["rho"]
 			node_mass = args["node_mass"]
 			Ax = args["Ax"]
@@ -466,29 +467,73 @@ def assemble_loads(loads,constraints,nodes, beam_sets,global_args,tot_dof,length
 				tr = t[6:9]
 				
 				mom = np.cross(np.cross(tq,tr),grav)
-				forces[6*beam[0]+0] += (0.5*rho*Ax*L+node_mass)*grav[0]
-				forces[6*beam[0]+1] += (0.5*rho*Ax*L+node_mass)*grav[1] 
-				forces[6*beam[0]+2] += (0.5*rho*Ax*L+node_mass)*grav[2]
+				mech_forces[6*beam[0]+0] += (0.5*rho*Ax*L+node_mass)*grav[0]
+				mech_forces[6*beam[0]+1] += (0.5*rho*Ax*L+node_mass)*grav[1] 
+				mech_forces[6*beam[0]+2] += (0.5*rho*Ax*L+node_mass)*grav[2]
 
-				forces[6*beam[1]+0] += (0.5*rho*Ax*L+node_mass)*grav[0]
-				forces[6*beam[1]+1] += (0.5*rho*Ax*L+node_mass)*grav[1] 
-				forces[6*beam[1]+2] += (0.5*rho*Ax*L+node_mass)*grav[2]
+				mech_forces[6*beam[1]+0] += (0.5*rho*Ax*L+node_mass)*grav[0]
+				mech_forces[6*beam[1]+1] += (0.5*rho*Ax*L+node_mass)*grav[1] 
+				mech_forces[6*beam[1]+2] += (0.5*rho*Ax*L+node_mass)*grav[2]
 
-				forces[6*beam[0]+3] += ( 1.0/12.0*rho*Ax*L*L)*mom[0]
-				forces[6*beam[0]+4] += ( 1.0/12.0*rho*Ax*L*L)*mom[1]
-				forces[6*beam[0]+5] += ( 1.0/12.0*rho*Ax*L*L)*mom[2]
+				mech_forces[6*beam[0]+3] += ( 1.0/12.0*rho*Ax*L*L)*mom[0]
+				mech_forces[6*beam[0]+4] += ( 1.0/12.0*rho*Ax*L*L)*mom[1]
+				mech_forces[6*beam[0]+5] += ( 1.0/12.0*rho*Ax*L*L)*mom[2]
 
-				forces[6*beam[1]+3] += (-1.0/12.0*rho*Ax*L*L)*mom[0]
-				forces[6*beam[1]+4] += (-1.0/12.0*rho*Ax*L*L)*mom[1]
-				forces[6*beam[1]+5] += (-1.0/12.0*rho*Ax*L*L)*mom[2]
+				mech_forces[6*beam[1]+3] += (-1.0/12.0*rho*Ax*L*L)*mom[0]
+				mech_forces[6*beam[1]+4] += (-1.0/12.0*rho*Ax*L*L)*mom[1]
+				mech_forces[6*beam[1]+5] += (-1.0/12.0*rho*Ax*L*L)*mom[2]
+
+	#Thermal loads assume a linear temperature gradient through 
+	#cross sections. Thermal loads are specified by values for 
+	#the coefficient of thermal expansion, the depth of the 
+	#section in the local y direction, the depth of the section 
+	#in the local z direction, and the temperature changes 
+	#on the +y surface, the -y surface, the +z surface, 
+	#and the -z surface. Thermal loads are applied over the 
+	#entire frame element.
+	for beamset, beamloads,args in beamsets:
+		for beamload in beamloads:
+			#Constructing a block diagonal transform matrix 
+			t = pfeautil.coord_trans(nodes[beam[0]],nodes[beam[1]],L,args["roll"])
+			tmat = np.reshape(t,(3,3)).T
+			tblock = scipy.linalg.block_diag(tmat,tmat,tmat,tmat)
+			E = args["E"]
+			Ax = args["Ax"]
+			Iy = args["Iy"]
+			Iz = args["Iz"]
+
+			bnum = beamload["beamelement"]
+			if beamload["type"] == "thermal":
+				a = beamload["cte"]
+				yd = beamload["ydepth"]
+				zd = beamload["zdepth"]
+				delTyp = beamload["delTyp"]
+				delTym = beamload["delTym"]
+				delTzp = beamload["delTzp"]
+				delTzm = beamload["delTzm"]
+
+				thermforcelocal = np.zeros(12)
+				thermforcelocal[0] = -a*(1.0/4.0)*(delTyp+delTym+delTzp+delTzm)*E*Ax
+				thermforcelocal[4] = a/zd*(delTzm-delTzp)*E*Iy
+				thermforcelocal[5] = a/yd*(delTyp-delTyp)*E*Iz
+				thermforcelocal[6] = -thermforcelocal[0]
+				thermforcelocal[10] = -thermforcelocal[4]
+				thermforcelocal[11] = -thermforcelocal[5]
+
+				thermforcetrans = np.dot(tblock,thermforcelocal)
+
+
+				for i in range(6):
+					therm_forces[6*beamset[bnum][0]+i] += thermforcetrans[i]
+					therm_forces[6*beamset[bnum][1]+i] += thermforcetrans[i+6]
 
 	for constraint in constraints:
 		dP[int(6*constraint['node']+constraint['DOF'])] = constraint['value']*length_scaling
 
-	return forces,dP
+	return mech_forces,therm_forces,dP
 
 def element_end_forces(nodes,Q,beam_sets,D):
-
+	m = 0
 	for beamset,bargs in beam_sets:
 		#every beam set lists the physical properties
 		#associated with that beam
@@ -508,7 +553,7 @@ def element_end_forces(nodes,Q,beam_sets,D):
 
 		s = co.matrix(0.0,(1,12))
 
-		for m,beam in enumerate(beamset):
+		for beam in beamset:
 			dn1 = np.array(list(D[int(beam[0])*6:int(beam[0])*6+6]))
 			dn2 = np.array(list(D[int(beam[1])*6:int(beam[1])*6+6]))
 			beam_props["dn1"] = dn1
@@ -525,8 +570,9 @@ def element_end_forces(nodes,Q,beam_sets,D):
 			frame_element_force(s,beam_props)
 
 			Q[m,:] = s
+			m++
 
-		return Q
+	return Q
 
 def frame_element_force(s,beam_props):
 	# beam_props is a dictionary with the following values
@@ -772,7 +818,7 @@ def equilibrium_error(K,nodemap,F,D,tot_dof,con_dof):
         Dq(i+1) is the vector of uknown displacements at iteration i+1
         Q(D(i)) is the set of frame element end forces at iteration i 
 '''
-def analyze_System(nodes, global_args, beam_sets, constraints,loads):
+def analyze_System(nodes, global_args, beamsets, constraints,nodalloads):
 	'''
 		nodes | is a numpy array of floats of shape (-1,3) specifying spatial location of nodes
   global_args | contains information about the whole problem:
@@ -810,7 +856,7 @@ def analyze_System(nodes, global_args, beam_sets, constraints,loads):
 	nE = sum(map(lambda x: np.shape(x[0])[0], beam_sets))    
 	nodes = nodes*length_scaling
 
-	for beamset, args in beam_sets:
+	for beams, beamloads, args in beamsets:
 		E = 1.0*args['E']/length_scaling/length_scaling
 		nu = args['nu']
 		d1 = args['d1']*length_scaling
@@ -859,38 +905,52 @@ def analyze_System(nodes, global_args, beam_sets, constraints,loads):
 	#organization of the stiffness matrix
 	node_map = pfeautil.gen_Node_map(nodes,constraints)
 
+	#Initialize Displacements, incremental displacements
+	#Reactions, and incremental reactions to 0
 	D = co.matrix(0.0,(1,tot_dof))
+	dD = co.matrix(0.0,(1,tot_dof))
+	R = co.matrix(0.0,(1,tot_dof))
+	dR = co.matrix(0.0,(1,tot_dof))
+
+	#Assemble the loads from the constraints etc. 
+	F_mech, F_therm ,dP = assemble_loads(nodalloads,constraints,nodes,beamsets,global_args,tot_dof,length_scaling)
 
 	#Part 1 of the Above algorithm
 	K = co.spmatrix([],[],[],(tot_dof,tot_dof))
 	Q = co.matrix(0.0,(nE,12))
-	K = assemble_K(nodes,beam_sets,Q,global_args)
+	K = assemble_K(nodes,beamsets,Q,global_args)
 
 	#Part 2
 	#This is where we'll solve for the displacements that occur
 	#due to temperature loads
+	dD,dR = solve_systen(K,node_map,dD,F_therm,con_dof)
+	D = D + dD.T
+	R = R + dR.T
+
 
 	#Part 3
 	#We first calculate the frame element end forces due to 
 	#the displacements from the temperature loads
 	#Then we recalculate K due to these node displacements
 
+	Q = element_end_forces(nodes,Q,beamsets,D)
+	K = assemble_K(nodes,beamsets,Q,global_args)
+ 
 	#Part 4
 	#Calculate the node displacements due to mechanical loads
 	#as well as prescribed node displacements
-	F,dP = assemble_loads(loads,constraints,nodes,beam_sets,global_args,tot_dof,length_scaling)
 	dD = dP
-	C  = np.zeros(tot_dof)
-	dD,C = solve_system(K,node_map,dD,F,con_dof)
-
+	dD,dR = solve_system(K,node_map,dD,F_mech,con_dof)
 	
 	#Part 5 
 	#Add together displacements due to temperature and
 	#mechanical, as well as forces
-	D = D.T + dD
-	
+	D = D + dD.T
+	R = R + dR.T
+
 	#Part 6
-	element_end_forces(nodes,Q, beam_sets, D)
+	F = F_mech+F_therm
+	element_end_forces(nodes,Q, beamsets, D)
 	
 	error = 1.0
 	dF,error = equilibrium_error(K,node_map,F,D,tot_dof,con_dof)

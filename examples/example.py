@@ -177,19 +177,18 @@ for subdiv in range(1,2):
 
 
 		#Group frames with their characteristic properties.
-		out_frames = [(np.array(frames),{'E'   : frame_props["E"],
-										 'rho' : frame_props["rho"],
-										 'nu'  : frame_props["nu"],
-										 'd1'  : frame_props["d1"],
-										 'd2'  : frame_props["d2"],
-										 'th'  : frame_props["th"],
-										 'beam_divisions' : frame_props["beam_divisions"],
-										 'cross_section'  : frame_props["cross_section"],
-										 'roll': frame_props["roll"],
-										 'loads':{'element':0},
-										 'prestresses':{'element':0},
-										 'Le': frame_props["Le"]})]
-
+		out_frames = [(np.array(frames),Null,{'E'   : frame_props["E"],
+										 	  'rho' : frame_props["rho"],
+										 	  'nu'  : frame_props["nu"],
+										 	  'd1'  : frame_props["d1"],
+										 	  'd2'  : frame_props["d2"],
+										 	  'th'  : frame_props["th"],
+										 	  'beam_divisions' : frame_props["beam_divisions"],
+										 	  'cross_section'  : frame_props["cross_section"],
+										 	  'roll': frame_props["roll"],
+										 	  'loads':{'element':0},
+										 	  'prestresses':{'element':0},
+										 	  'Le': frame_props["Le"]})]
 		#Format node positions
 		out_nodes = np.array(nodes)
 
