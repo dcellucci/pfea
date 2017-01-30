@@ -48,7 +48,7 @@ def assemble_K(nodes,beam_sets,Q,args):
 	q_index = 0
 	dat_dex = 0
 	size = 18
-	for beamset,bargs in beam_sets:
+	for beamset,beamloads,bargs in beam_sets:
 		#every beam set lists the physical properties
 		#associated with that beam
 		
@@ -451,7 +451,7 @@ def assemble_loads(nodalloads,constraints,nodes, beamsets,global_args,tot_dof,le
 	grav = np.array(global_args["gravity"])
 
 	#Loads from specified nodal loads
-	for nodalload in nodalloads:
+	for load in nodalloads:
 		mech_forces[6*load['node']+load['DOF']] = load['value']
 
 	if np.linalg.norm(grav) > 0:
@@ -534,7 +534,7 @@ def assemble_loads(nodalloads,constraints,nodes, beamsets,global_args,tot_dof,le
 
 def element_end_forces(nodes,Q,beam_sets,D):
 	m = 0
-	for beamset,bargs in beam_sets:
+	for beamset,beamloads,bargs in beam_sets:
 		#every beam set lists the physical properties
 		#associated with that beam
 		
@@ -553,7 +553,7 @@ def element_end_forces(nodes,Q,beam_sets,D):
 
 		s = co.matrix(0.0,(1,12))
 
-		for beam in beamset:
+		for m,beam in enumerate(beamset):
 			dn1 = np.array(list(D[int(beam[0])*6:int(beam[0])*6+6]))
 			dn2 = np.array(list(D[int(beam[1])*6:int(beam[1])*6+6]))
 			beam_props["dn1"] = dn1
@@ -563,7 +563,7 @@ def element_end_forces(nodes,Q,beam_sets,D):
 			beam_props["xn1"] = xn1
 			beam_props["xn2"] = xn2
 
-			#beam_props["Le"]  = sqrt((xn2[0]-xn1[0])**2+(xn2[1]-xn1[1])**2+(xn2[2]-xn1[2])**2) 
+			beam_props["Le"]  = sqrt((xn2[0]-xn1[0])**2+(xn2[1]-xn1[1])**2+(xn2[2]-xn1[2])**2) 
 			#Things that are not faster than the above:
 			#   sp.spatial.distance.euclidean(xn2,xn1)
 			#beam_props["eqF_mech"] = Null
@@ -571,7 +571,6 @@ def element_end_forces(nodes,Q,beam_sets,D):
 
 			Q[m,:] = s
 			#<<<SOMETHING IMPORTANT HERE BUT I FORGOT>>>
-			#m++
 
 	return Q
 
@@ -819,7 +818,7 @@ def equilibrium_error(K,nodemap,F,D,tot_dof,con_dof):
         Dq(i+1) is the vector of uknown displacements at iteration i+1
         Q(D(i)) is the set of frame element end forces at iteration i 
 '''
-def analyze_System(nodes, global_args, beamsets, constraints,nodalloads):
+def analyze_System(nodes, global_args, beamsets, constraints, nodalloads):
 	'''
 		nodes | is a numpy array of floats of shape (-1,3) specifying spatial location of nodes
   global_args | contains information about the whole problem:
@@ -854,7 +853,7 @@ def analyze_System(nodes, global_args, beamsets, constraints,nodalloads):
 	except(KeyError):
 		node_radius=np.zeros(np.shape(nodes)[0])
 
-	nE = sum(map(lambda x: np.shape(x[0])[0], beam_sets))    
+	nE = sum(map(lambda x: np.shape(x[0])[0], beamsets))    
 	nodes = nodes*length_scaling
 
 	for beams, beamloads, args in beamsets:
@@ -901,6 +900,7 @@ def analyze_System(nodes, global_args, beamsets, constraints,nodalloads):
 	tot_dof = len(nodes)*6
 	con_dof = len(constraints) #constrained Degrees of Freedom
 	
+
 	global_args["dof"] = tot_dof
 	#calculate the node mapping that allows for straightforward
 	#organization of the stiffness matrix
@@ -916,6 +916,7 @@ def analyze_System(nodes, global_args, beamsets, constraints,nodalloads):
 	#Assemble the loads from the constraints etc. 
 	F_mech, F_therm ,dP = assemble_loads(nodalloads,constraints,nodes,beamsets,global_args,tot_dof,length_scaling)
 
+	#print F_mech
 	#Part 1 of the Above algorithm
 	K = co.spmatrix([],[],[],(tot_dof,tot_dof))
 	Q = co.matrix(0.0,(nE,12))
@@ -924,9 +925,9 @@ def analyze_System(nodes, global_args, beamsets, constraints,nodalloads):
 	#Part 2
 	#This is where we'll solve for the displacements that occur
 	#due to temperature loads
-	dD,dR = solve_systen(K,node_map,dD,F_therm,con_dof)
-	D = D + dD.T
-	R = R + dR.T
+	#dD,dR = solve_systen(K,node_map,dD,F_therm,con_dof)
+	#D = D + dD.T
+	#R = R + dR.T
 
 
 	#Part 3
@@ -934,8 +935,8 @@ def analyze_System(nodes, global_args, beamsets, constraints,nodalloads):
 	#the displacements from the temperature loads
 	#Then we recalculate K due to these node displacements
 
-	Q = element_end_forces(nodes,Q,beamsets,D)
-	K = assemble_K(nodes,beamsets,Q,global_args)
+	#Q = element_end_forces(nodes,Q,beamsets,D)
+	#K = assemble_K(nodes,beamsets,Q,global_args)
  
 	#Part 4
 	#Calculate the node displacements due to mechanical loads
@@ -950,11 +951,11 @@ def analyze_System(nodes, global_args, beamsets, constraints,nodalloads):
 	R = R + dR.T
 
 	#Part 6
-	F = F_mech+F_therm
+	F = F_mech#+F_therm
 	element_end_forces(nodes,Q, beamsets, D)
 	
 	error = 1.0
-	dF,error = equilibrium_error(K,node_map,F,D,tot_dof,con_dof)
+	dF,error = equilibrium_error(K,node_map,F,D.T,tot_dof,con_dof)
 	
 	
 	#Part 7
@@ -974,14 +975,14 @@ def analyze_System(nodes, global_args, beamsets, constraints,nodalloads):
 	while np.abs(error-lasterror) > 0.01*error and error > 1e-9 and it < 10:
 		it = it + 1
 		
-		K = assemble_K(nodes,beam_sets,Q,global_args)
+		K = assemble_K(nodes,beamsets,Q,global_args)
 		lasterror = error
-		dF,error = equilibrium_error(K,node_map,F,D,tot_dof,con_dof)
+		dF,error = equilibrium_error(K,node_map,F,D.T,tot_dof,con_dof)
 
 		dD,C = solve_system(K,node_map,dD,dF,con_dof)
 
-		D = D + dD
-		Q = element_end_forces(nodes,Q,beam_sets,D)
+		D = D + dD.T
+		Q = element_end_forces(nodes,Q,beamsets,D)
 		print("NR Iteration {0}".format(it))
 		print("RMS relative equilibrium error = {0}".format(error))
 
