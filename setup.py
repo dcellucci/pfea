@@ -17,5 +17,6 @@ setup(name='pfea',
 		'networkx',
 		'matplotlib',
 		'cvxopt',
+		'sympy',
 	]
 	)

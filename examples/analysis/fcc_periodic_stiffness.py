@@ -1,3 +1,4 @@
+# See the README for more info.
 import pfea
 import numpy as np
 
@@ -12,6 +13,7 @@ Be[5][4] = 0.5
 Be[6][5] = 0.5
 Be[7][4] = 0.5
 
+#Populating a block matrix full of 6x6 identity matrices
 Bo = np.zeros((84,24))
 idenind = [0,0,1,0,0,2,3,3,2,0,0,1,0,0]
 for j,ind in enumerate(idenind):
@@ -158,7 +160,7 @@ frame_names = ["FCC","Octet","D-Schwarz","BCC"]
 frame_list = [fcc_frames,octet_frames,d_sch_frames]
 frame_num = [12.0,24.0,12.0,12.0]
 
-for framedex in [1]:
+for framedex in [2]:
 	frames = frame_list[framedex]
 	lb = uc_dims/np.sqrt(2)
 

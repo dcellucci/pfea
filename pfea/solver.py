@@ -570,7 +570,8 @@ def element_end_forces(nodes,Q,beam_sets,D):
 			frame_element_force(s,beam_props)
 
 			Q[m,:] = s
-			m++
+			#<<<SOMETHING IMPORTANT HERE BUT I FORGOT>>>
+			#m++
 
 	return Q
 
