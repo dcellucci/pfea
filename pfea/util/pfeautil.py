@@ -180,3 +180,5 @@ def gen_Node_map(nodes,constraints):
 
     return co.spmatrix(data,row,col) 
 
+
+    
