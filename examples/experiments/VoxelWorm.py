@@ -12,6 +12,7 @@ from math import *
 import pfea.solver
 import os
 import cvxopt as co
+import scipy.sparse.linalg as spLinAlg
 
 
 ####### ######     #    #     # ####### 
@@ -183,3 +184,12 @@ else:
 pfea.solver.write_K(out_nodes,out_frames,global_args,'K.txt')
 pfea.solver.write_M(out_nodes,out_frames,global_args,'M.txt')
 pfea.util.pfeautil.writeCSV(nodes,res_displace,'Force12NCompression.csv')
+
+M = pfea.solver.provide_M(out_nodes,out_frames,global_args)
+K = pfea.solver.provide_K(out_nodes,out_frames,global_args)
+
+#Converting from cvxopt to scipy
+
+
+
+eigVal,eigVect = spLinAlg.eigs(K,k=6,M=M)
