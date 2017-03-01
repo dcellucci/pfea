@@ -86,6 +86,9 @@ nodes,frames,node_frame_map,dims = pfea.geom.cuboct.from_material(mat_matrix,vox
 frame_props["Le"] = pfea.geom.cuboct.frame_length(vox_pitch)
 
 force = 12
+weight = 72.2*9.8*1e-3
+CM = [0.0762,0.0762,2*0.0762]
+Cf = 0.02
 
 #Constraint and load population
 constraints = []
@@ -145,6 +148,15 @@ constraints.append({'node':node_frame_map[2][2][2][5],'DOF':5, 'value':0})
 loads.append({'node':node_frame_map[2][1][2][5],'DOF':0, 'value':-force})
 loads.append({'node':node_frame_map[2][2][2][5],'DOF':0, 'value':-force})
 
+loads.append({'node':node_frame_map[1][1][1][0],'DOF':0, 'value':weight/8})
+loads.append({'node':node_frame_map[1][2][1][0],'DOF':0, 'value':weight/8})
+loads.append({'node':node_frame_map[1][1][2][0],'DOF':0, 'value':weight/8})
+loads.append({'node':node_frame_map[1][2][2][0],'DOF':0, 'value':weight/8})
+loads.append({'node':node_frame_map[1][1][3][0],'DOF':0, 'value':weight/8})
+loads.append({'node':node_frame_map[1][2][3][0],'DOF':0, 'value':weight/8})
+loads.append({'node':node_frame_map[1][1][4][0],'DOF':0, 'value':weight/8})
+loads.append({'node':node_frame_map[1][2][4][0],'DOF':0, 'value':weight/8})
+
 #####  ### #     #    ####### #     # ####### ######  #     # ####### 
 #       #  ##   ##    #     # #     #    #    #     # #     #    #    
 #       #  # # # #    #     # #     #    #    #     # #     #    #    
@@ -180,16 +192,37 @@ if global_args["using_Frame3dd"]:
 else:
 	res_displace,C,Q = pfea.solver.analyze_System(out_nodes, global_args, out_frames, constraints,loads)
 
-#pfeautil.plotLattice(nodes,frames,res_displace,1)
+#print res_displace
+#print res_displace
+temp = np.where(out_nodes[:,0]==min(out_nodes[:,0]))
+#temp = np.where(res_displace[:,0] < min(res_displace[:,0])+0.01*min(res_displace[:,0]))
+#print temp
+#print res_displace[temp,0]
+botRes_Disp = res_displace[temp,0]
+#print botRes_Disp[0,:]
+minIndex = np.where(botRes_Disp[0,:]<min(botRes_Disp[0,:])+abs(min(botRes_Disp[0,:]))*0.001)
+bottomNodes = temp[0]
+bottomDisp = np.zeros((len(bottomNodes),3))
+#print out_nodes[bottomNodes,:]#+res_displace[bottomNodes[minIndex],0:3]
+#print (out_nodes[bottomNodes,:]/0.0381+1)/2
+reactForce = np.zeros((len(bottomDisp),3))
+for i in minIndex:
+    bottomDisp[i,:] = out_nodes[bottomNodes[i],:]+res_displace[bottomNodes[i],0:3]
+    reactForce[i,:] = [weight/len(bottomDisp),Cf*weight/len(bottomDisp),0]
+#print bottomDisp
+#print reactForce
+reactions = np.zeros((8,6))
+reactions[:,0:3] = reactForce
+reactions[:,3:7] = np.dot(np.cross(bottomDisp,reactForce),np.array([[1,0,0],[0,1,0],[0,0,1]]))
+#print np.dot(np.cross(bottomDisp,reactForce),np.array([[1,0,0],[0,1,0],[0,0,1]]))
+#print reactions
+
+np.savetxt('VoxelWorm.csv', out_frames[0][0], delimiter=',')
+
+#pfea.util.pfeautil.plotLattice(nodes,frames,res_displace,1)
 pfea.solver.write_K(out_nodes,out_frames,global_args,'K.txt')
 pfea.solver.write_M(out_nodes,out_frames,global_args,'M.txt')
 pfea.util.pfeautil.writeCSV(nodes,res_displace,'Force12NCompression.csv')
 
 M = pfea.solver.provide_M(out_nodes,out_frames,global_args)
 K = pfea.solver.provide_K(out_nodes,out_frames,global_args)
-
-#Converting from cvxopt to scipy
-
-
-
-eigVal,eigVect = spLinAlg.eigs(K,k=6,M=M)

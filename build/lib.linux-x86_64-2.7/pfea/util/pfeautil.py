@@ -8,6 +8,8 @@ import networkx as nx
 import itertools
 import cvxopt as co
 import csv
+import matplotlib
+import matplotlib.pyplot as plt
 
 '''
 def V3(x,y,z):
@@ -235,9 +237,9 @@ def writeCSV(nodes,res_displace,filename):
     #Might need to eventually add rotational displacement
     with open(filename, 'wb') as csvfile:
         spamwriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        spamwriter.writerow(['X Start,Y Start,Z Start,X Rot,Y Rot,Z Rot,X Disp,Y Disp,Z Disp'])
+        spamwriter.writerow(['X Start,Y Start,Z Start,X Rot,Y Rot,Z Rot,X Disp,Y Disp,Z Disp,X Disp Rot,Y Disp Rot,Z Disp Rot'])
         for i,node in enumerate(nodes):
             # Note that for now I have it so the rotation is always zero to intialize. I think that the current iteration of the solver has this requirement as well
             # it might be useful to adapt this later
-            spamwriter.writerow([node[0]]+[node[1]]+[node[2]]+[0.0]+[0.0]+[0.0]+[res_displace[i][0]]+[res_displace[i][1]]+[res_displace[i][2]])
+            spamwriter.writerow([node[0]]+[node[1]]+[node[2]]+[0.0]+[0.0]+[0.0]+[res_displace[i][0]]+[res_displace[i][1]]+[res_displace[i][2]]+[res_displace[i][3]]+[res_displace[i][4]]+[res_displace[i][5]])
 
