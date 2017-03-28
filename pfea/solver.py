@@ -1273,10 +1273,10 @@ def analyze_System(nodes, global_args, beam_sets, constraints,loads):
 	#Part 8 Find the reaction forces
 
 	#Epilogue: Output the final node displacements.
-	fin_node_disp = np.zeros((len(nodes),3))
+	fin_node_disp = np.zeros((len(nodes),6))
 
 	for n in range(len(nodes)):
-		fin_node_disp[n:,] = np.array([D[n*6],D[n*6+1],D[n*6+2]])	
+		fin_node_disp[n:,] = np.array([D[n*6],D[n*6+1],D[n*6+2],D[n*6+3],D[n*6+4],D[n*6+5]])	
 	
 
 	return fin_node_disp,C,Q
