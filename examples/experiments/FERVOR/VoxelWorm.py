@@ -219,7 +219,7 @@ reactions[:,3:7] = np.dot(np.cross(bottomDisp,reactForce),np.array([[1,0,0],[0,1
 
 np.savetxt('VoxelWorm.csv', out_frames[0][0], delimiter=',')
 
-#pfea.util.pfeautil.plotLattice(nodes,frames,res_displace,1)
+pfea.util.pfeautil.plotLattice(nodes,frames,res_displace,1)
 pfea.solver.write_K(out_nodes,out_frames,global_args,'K.txt')
 pfea.solver.write_M(out_nodes,out_frames,global_args,'M.txt')
 pfea.util.pfeautil.writeCSV(nodes,res_displace,'Force12NCompression.csv')
