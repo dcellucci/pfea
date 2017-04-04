@@ -1,6 +1,11 @@
 # See the README for more info.
 import pfea
 import numpy as np
+from scipy.optimize import curve_fit
+
+import matplotlib
+import matplotlib.pyplot as plt
+
 
 Be = np.zeros((9,6))
 Be[0][0] = 1.0
@@ -146,155 +151,201 @@ d_sch_frames = 	 [[ 0, 2],
 				  #[11,13]
 				  ]
 
-bcc_frames = [[]]
+cuboct_frames = [[2,5],
+				 [2,6],
+				 [2,7],
+				 [2,8],
+				 ]
 
-uc_dims = 0.01 #m
-Emat = 11e9
+uc_dims = 0.1 #m
+Emat = 1
 numat = 0.3
-rel_den = 0.01
+rel_den = 0.1
 
 Be = Be*uc_dims
 nodes = uc_dims*np.array(nodes)
 
-frame_names = ["FCC","Octet","D-Schwarz","BCC"]
-frame_list = [fcc_frames,octet_frames,d_sch_frames]
+frame_names = ["FCC","Octet","D-Schwarz","CubOct"]
+frame_list = [fcc_frames,octet_frames,d_sch_frames,cuboct_frames]
 frame_num = [12.0,24.0,12.0,12.0]
 
-for framedex in [2]:
+debugprint = False
+
+rel_dens = [0.005,0.01,0.05,0.1]
+
+frame_index = 1
+
+for framedex in [frame_index]:
 	frames = frame_list[framedex]
 	lb = uc_dims/np.sqrt(2)
 
-	if(framedex == 0):
-		# rel_den = (12*A*lb/sqrt(2)+3*A*lb)/lb^3
-		# rel_den = (6/sq(2)+3/2)A/lb^2
-		# rel_den = A*3/2(2sq(2)+1)/lb^2
-		# A = rel_den*lb^2/(3/2*(2sq(2)+1))
+	d1s = []
+	
+	alphas = []
+	betas = []
+	gammas = []
 
-		d1 = 2.0*np.sqrt(rel_den*lb**2/(np.pi*3.0/2.0*(2*np.sqrt(2)+1)))
+	for rel_den in rel_dens:
+
+		if(framedex == 0):
+			# rel_den = (12*A*lb/sqrt(2)+3*A*lb)/lb^3
+			# rel_den = (6/sq(2)+3/2)A/lb^2
+			# rel_den = A*3/2(2sq(2)+1)/lb^2
+			# A = rel_den*lb^2/(3/2*(2sq(2)+1))
+
+			d1 = 2.0*np.sqrt(rel_den*lb**2/(np.pi*3.0/2.0*(2*np.sqrt(2)+1)))
+
+			frame_props = {"nu"  : numat, #poisson's ratio
+								   "d1"	 : d1, #m
+								   "d2"	 : d1, #m
+								   "th"  : d1/2.0,
+								   "E"   :  Emat, #N/m^2,
+								   "rho" :  1650, #kg/m^3
+								   "Le"  : lb,
+								   "beam_divisions" : 0,
+								   "cross_section"  : 'circular',
+								   "roll": 0}
+			out_frames = [(np.array(frames),0,{'E'   : frame_props["E"],
+											 'rho' : frame_props["rho"],
+											 'nu'  : frame_props["nu"],
+											 'd1'  : frame_props["d1"],
+											 'd2'  : frame_props["d2"],
+											 'th'  : frame_props["th"],
+											 'cross_section'  : frame_props["cross_section"],
+											 'roll': frame_props["roll"],
+											 'loads':{'element':0},
+											 'prestresses':{'element':0},
+											 'Le': frame_props["Le"],
+											 'beam_divisions': 1,
+											 'shear': False}),
+						(np.array(fcc_cube_frame),0,{'E'   : frame_props["E"],
+											 'rho' : frame_props["rho"],
+											 'nu'  : frame_props["nu"],
+											 'd1'  : frame_props["d1"],
+											 'd2'  : frame_props["d2"],
+											 'th'  : frame_props["th"],
+											 'cross_section'  : frame_props["cross_section"],
+											 'roll': frame_props["roll"],
+											 'loads':{'element':0},
+											 'prestresses':{'element':0},
+											 'Le': uc_dims,
+											 'beam_divisions': 1,
+											 'shear': False})]
+		else:
+			# rel_den = num_beams*A*lb/uc_dims**3 
+			#d1 = np.sqrt(rel_den/frame_num[framedex]*uc_dims**3/lb)
+			# rel_den = num_beams*pi*(d1/2)^2*lb/uc_dims^3
+			d1 = 2.0*np.sqrt(rel_den/frame_num[framedex]/np.pi*uc_dims**3/lb)
+
+			frame_props = {"nu"  : numat, #poisson's ratio
+								   "d1"	 : d1, #m
+								   "d2"	 : d1, #m
+								   "th"  : d1/2.0,
+								   "E"   :  Emat, #N/m^2,
+								   "rho" :  1650, #kg/m^3
+								   "Le"  : lb,
+								   "beam_divisions" : 0,
+								   "cross_section"  : 'circular',
+								   "roll": 0}
+
+
+
+			out_frames = [(np.array(frames),0,{'E'   : frame_props["E"],
+												  'rho' : frame_props["rho"],
+												  'nu'  : frame_props["nu"],
+												  'd1'  : frame_props["d1"],
+												  'd2'  : frame_props["d2"],
+												  'th'  : frame_props["th"],
+												  'cross_section'  : frame_props["cross_section"],
+												  'roll': frame_props["roll"],
+												  'loads':{'element':0},
+												  'prestresses':{'element':0},
+												  'Le': frame_props["Le"],
+												  'beam_divisions': 1,
+												  'shear': False})]
+		d1s.append(d1)
+		global_args = {"dof" : len(nodes)*6}
+
 		
-		frame_props = {"nu"  : numat, #poisson's ratio
-							   "d1"	 : d1, #m
-							   "d2"	 : d1, #m
-							   "th"  : d1/2.0,
-							   "E"   :  Emat, #N/m^2,
-							   "rho" :  1650, #kg/m^3
-							   "Le"  : lb,
-							   "beam_divisions" : 0,
-							   "cross_section"  : 'circular',
-							   "roll": 0}
-		out_frames = [(np.array(frames),{'E'   : frame_props["E"],
-										 'rho' : frame_props["rho"],
-										 'nu'  : frame_props["nu"],
-										 'd1'  : frame_props["d1"],
-										 'd2'  : frame_props["d2"],
-										 'th'  : frame_props["th"],
-										 'cross_section'  : frame_props["cross_section"],
-										 'roll': frame_props["roll"],
-										 'loads':{'element':0},
-										 'prestresses':{'element':0},
-										 'Le': frame_props["Le"],
-										 'beam_divisions': 1,
-										 'shear': False}),
-					(np.array(fcc_cube_frame),{'E'   : frame_props["E"],
-										 'rho' : frame_props["rho"],
-										 'nu'  : frame_props["nu"],
-										 'd1'  : frame_props["d1"],
-										 'd2'  : frame_props["d2"],
-										 'th'  : frame_props["th"],
-										 'cross_section'  : frame_props["cross_section"],
-										 'roll': frame_props["roll"],
-										 'loads':{'element':0},
-										 'prestresses':{'element':0},
-										 'Le': uc_dims,
-										 'beam_divisions': 1,
-										 'shear': False})]
-	else:
-		# rel_den = num_beams*A*lb/uc_dims**3 
-		#d1 = np.sqrt(rel_den/frame_num[framedex]*uc_dims**3/lb)
-		# rel_den = num_beams*pi*(d1/2)^2*lb/uc_dims^3
-		d1 = 2.0*np.sqrt(rel_den/frame_num[framedex]/np.pi*uc_dims**3/lb)
+		K_uc = pfea.solver.provide_K(nodes,global_args,out_frames)
+		 
+		tk_uc = np.zeros((84,84))
 
-		frame_props = {"nu"  : numat, #poisson's ratio
-							   "d1"	 : d1, #m
-							   "d2"	 : d1, #m
-							   "th"  : d1/2.0,
-							   "E"   :  Emat, #N/m^2,
-							   "rho" :  1650, #kg/m^3
-							   "Le"  : lb,
-							   "beam_divisions" : 0,
-							   "cross_section"  : 'circular',
-							   "roll": 0}
+		for i,col in enumerate(K_uc.I):
+			tk_uc[K_uc.J[i]][col] = K_uc[col*84+K_uc.J[i]]
+
+		K_uc = tk_uc
+
+
+		Do = -1*np.dot(np.linalg.pinv(np.dot(Bo.T,np.dot(K_uc,Bo))),np.dot(Bo.T,np.dot(K_uc,Ba)))
+
+		Da = np.dot(Bo,Do)+Ba
+
+		Kda = np.dot(Da.T,np.dot(K_uc,Da))
 
 
 
-		out_frames = [(np.array(frames),{'E'   : frame_props["E"],
-										 'rho' : frame_props["rho"],
-										 'nu'  : frame_props["nu"],
-										 'd1'  : frame_props["d1"],
-										 'd2'  : frame_props["d2"],
-										 'th'  : frame_props["th"],
-										 'cross_section'  : frame_props["cross_section"],
-										 'roll': frame_props["roll"],
-										 'loads':{'element':0},
-										 'prestresses':{'element':0},
-										 'Le': frame_props["Le"],
-										 'beam_divisions': 1,
-										 'shear': False})]
+		Ke = 1.0/(uc_dims**3)*np.dot(Be.T,np.dot(Kda,Be))
 
-	global_args = {"dof" : len(nodes)*6}
+		w,v = np.linalg.eig(Ke)
+		sw = np.sort(w)[::-1]
+		#print(sw)
+		evals = np.array([sw[0],sw[1],sw[3]])
+		tform = np.array([[ 1, 2, 0],
+						  [ 1,-1, 0],
+						  [ 0, 0, 1]])
 
-	
-	K_uc = pfea.provide_K(nodes,global_args,out_frames)
-	 
-	tk_uc = np.zeros((84,84))
+		eig1 = Emat/(1-2*numat)
+		eig2 = Emat/(numat+1)
+		eig3 = Emat/(2*(numat+1))
 
-	for i,col in enumerate(K_uc.I):
-		tk_uc[K_uc.J[i]][col] = K_uc[col*84+K_uc.J[i]]
-
-	K_uc = tk_uc
+		base = np.dot(np.linalg.inv(tform),evals)/(Emat)#np.pi*(d1/2.0)**2)*lb**2
 
 
-	Do = -1*np.dot(np.linalg.pinv(np.dot(Bo.T,np.dot(K_uc,Bo))),np.dot(Bo.T,np.dot(K_uc,Ba)))
+		compliance = np.linalg.inv(Ke)*Emat*rel_den
+		
+		alphas.append(base[0])
+		betas.append(base[1])
+		gammas.append(base[2])
+		
+		if(debugprint):
+			print('\n'.join([' '.join(['{:>6.3f}'.format(item) for item in row]) 
+		      for row in compliance]))
 
-	Da = np.dot(Bo,Do)+Ba
+			print(frame_names[framedex])
+			print("compare: {0}".format(np.sqrt(2)*(d1/2.0)**2*np.pi/lb**2+12*np.sqrt(2)*0.25*(d1/2.0)**4*np.pi/lb**4))
+			print("Alpha: {0}".format(base[0])) #*frame_props["Le"]**2/frame_props["d1"]**2))#np.dot(np.linalg.inv(tform),evals))
+			print("Beta: {0}".format(base[1])) #*frame_props["Le"]**2/frame_props["d1"]**2))
+			print("Gamma: {0}".format(base[2])) #*frame_props["Le"]**2/frame_props["d1"]**2))
+			
+			print("Hydrostatic: {0}".format(evals[0]/Emat/rel_den))#np.dot(np.linalg.inv(tform),evals))
+			print("Deviatoric: {0}".format(evals[1]/Emat/rel_den))
+			print("Shear: {0}".format(evals[2]/Emat/rel_den))
+			
+			print("\n")
 
-	Kda = np.dot(Da.T,np.dot(K_uc,Da))
+def func(d1, a, b):
+	return np.pi*(0.5*d1)**2/lb**2*a+0.25*np.pi*(0.5*d1)**4/lb**4*b
 
+alphas = np.array(alphas)
+betas = np.array(betas)
+gammas = np.array(gammas)
 
+print((alphas-betas)/(Emat/(numat+1)))
 
-	Ke = 1.0/(uc_dims**3)*np.dot(Be.T,np.dot(Kda,Be))
+plt.title(frame_names[frame_index])
+plt.plot(rel_dens,(alphas-betas)/(Emat/(numat+1)))
+plt.yscale('log')
+plt.xscale('log')
+plt.xlim(0.003,0.3)
+plt.show()
 
-	w,v = np.linalg.eig(Ke)
-	sw = np.sort(w)[::-1]
-	print(sw)
-	evals = np.array([sw[0],sw[1],sw[3]])
-	tform = np.array([[ 1, 2, 0],
-					  [ 1,-1, 0],
-					  [ 0, 0, 1]])
-
-	eig1 = Emat/(1-2*numat)
-	eig2 = Emat/(numat+1)
-	eig3 = Emat/(2*(numat+1))
-
-	base = np.dot(np.linalg.inv(tform),evals)/(Emat*np.pi*(d1/2.0)**2)*lb**2
-
-	compliance = np.linalg.inv(Ke)*Emat*rel_den
-
-	print('\n'.join([' '.join(['{:>6.3f}'.format(item) for item in row]) 
-      for row in compliance]))
-
-	
-
-	print(frame_names[framedex])
-
-	print("Alpha: {0}".format(base[0])) #*frame_props["Le"]**2/frame_props["d1"]**2))#np.dot(np.linalg.inv(tform),evals))
-	print("Beta: {0}".format(base[1])) #*frame_props["Le"]**2/frame_props["d1"]**2))
-	print("Gamma: {0}".format(base[2])) #*frame_props["Le"]**2/frame_props["d1"]**2))
-	
-	print("Hydrostatic: {0}".format(evals[0]/Emat/rel_den))#np.dot(np.linalg.inv(tform),evals))
-	print("Deviatoric: {0}".format(evals[1]/Emat/rel_den))
-	print("Shear: {0}".format(evals[2]/Emat/rel_den))
-	
-	print("\n")
-
+print("       Axial | Bending")
+popt, pcov = curve_fit(func, d1s, np.real(alphas))
+print("a/E_s| {0:6.3f}|{1:6.3f}".format(popt[0],popt[1]))
+popt, pcov = curve_fit(func, d1s, np.real(betas))
+print("b/E_s| {0:6.3f}|{1:6.3f}".format(popt[0],popt[1]))
+popt, pcov = curve_fit(func, d1s, np.real(gammas))
+print("g/E_s| {0:6.3f}|{1:6.3f}".format(popt[0],popt[1]))
+#print np.sqrt(np.diag(pcov))
 

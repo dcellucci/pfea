@@ -13,16 +13,16 @@ import scipy as sp
 import cvxopt as co
 from cvxopt import cholmod
 
-#    #       #     #    #    ####### ######  ### #     # 
-#   #        ##   ##   # #      #    #     #  #   #   #  
-#  #         # # # #  #   #     #    #     #  #    # #   
-###          #  #  # #     #    #    ######   #     #    
-#  #         #     # #######    #    #   #    #    # #   
-#   #        #     # #     #    #    #    #   #   #   #  
-#    #       #     # #     #    #    #     # ### #     # 
+#    #       #     #    #    ####### ######  ### #     #
+#   #        ##   ##   # #      #    #     #  #   #   #
+#  #         # # # #  #   #     #    #     #  #    # #
+###          #  #  # #     #    #    ######   #     #
+#  #         #     # #######    #    #   #    #    # #
+#   #        #     # #     #    #    #    #   #   #   #
+#    #       #     # #     #    #    #     # ### #     #
 
 # Functions related to the construction of the stiffness matrix K
-                                                        
+
 def assemble_K(nodes,beam_sets,Q,args):
 	'''
 	# Nodes is all the nodes
@@ -51,7 +51,7 @@ def assemble_K(nodes,beam_sets,Q,args):
 	for beamset,beamloads,bargs in beam_sets:
 		#every beam set lists the physical properties
 		#associated with that beam
-		
+
 		#transfer those properties over
 		beam_props = {"Ax"		:bargs["Ax"],
 					  "Asy"		: bargs["Asy"],
@@ -70,11 +70,11 @@ def assemble_K(nodes,beam_sets,Q,args):
 			xn2 = nodes[beam[1]]
 			beam_props["xn1"] = xn1
 			beam_props["xn2"] = xn2
-			
-			#beam_props["Le"]  = sqrt((xn2[0]-xn1[0])**2+(xn2[1]-xn1[1])**2+(xn2[2]-xn1[2])**2) 
+
+			#beam_props["Le"]  = sqrt((xn2[0]-xn1[0])**2+(xn2[1]-xn1[1])**2+(xn2[2]-xn1[2])**2)
 			#Things that are not faster than the above:
 			#   sp.spatial.distance.euclidean(xn2,xn1)
-			
+
 			beam_props["T"]	  = -Q[q_index,0]
 			q_index = q_index+1
 
@@ -108,14 +108,14 @@ def assemble_K(nodes,beam_sets,Q,args):
 				row[dat_dex:dat_dex+lendat] = trow[:]
 				col[dat_dex:dat_dex+lendat] = tcol[:]
 				dat_dex+=lendat
-	
+
 	#print(data[dat_dex*size:(dat_dex+1)*size])
 	data = data[:dat_dex]
 	row = row[:dat_dex]
 	col = col[:dat_dex]
 	K = co.spmatrix(data,col,row,(tot_dof,tot_dof))
 	return K
-	
+
 #ELASTIC_K - space frame elastic stiffness matrix in global coordinates
 
 def elastic_K(beam_props):
@@ -165,7 +165,7 @@ def elastic_K(beam_props):
 		Ksz = 12.0*E*Iy / (G*Asz*Le*Le)
 	else:
 		Ksy = Ksz = 0.0
-	
+
 	k[0,0]  = k[6,6]   = 1.0*E*Ax / Le
 	k[1,1]  = k[7,7]   = 12.*E*Iz / ( Le*Le*Le*(1.+Ksy) )
 	k[2,2]  = k[8,8]   = 12.*E*Iy / ( Le*Le*Le*(1.+Ksz) )
@@ -220,8 +220,8 @@ def geometric_K(beam_props):
 	# Iz 	: bending moment of inertia, z direction
 	# p 	: The roll angle (radians)
 	# T 	: internal element end force
-	# shear : whether shear effects are considered. 
-	
+	# shear : whether shear effects are considered.
+
 	xn1 	= beam_props["xn1"]
 	xn2 	= beam_props["xn2"]
 	L   	= beam_props["Le"]
@@ -253,22 +253,22 @@ def geometric_K(beam_props):
 
 	#print(T)
 	kg[0][0]  = kg[6][6]   =  0.0 # T/L
-	 
+
 	kg[1][1]  = kg[7][7]   =  T/L*(1.2+2.0*Ksy+Ksy*Ksy)/Dsy
 	kg[2][2]  = kg[8][8]   =  T/L*(1.2+2.0*Ksz+Ksz*Ksz)/Dsz
 	kg[3][3]  = kg[9][9]   =  T/L*J/Ax
 	kg[4][4]  = kg[10][10] =  T*L*(2.0/15.0+Ksz/6.0+Ksz*Ksz/12.0)/Dsz
 	kg[5][5]  = kg[11][11] =  T*L*(2.0/15.0+Ksy/6.0+Ksy*Ksy/12.0)/Dsy
-	 
+
 	kg[0][6]  = kg[6][0]   =  0.0 # -T/L
-	
+
 	kg[4][2]  = kg[2][4]   =  kg[10][2] = kg[2][10] = -T/10.0/Dsz
 	kg[8][4]  = kg[4][8]   =  kg[10][8] = kg[8][10] =  T/10.0/Dsz
 	kg[5][1]  = kg[1][5]   =  kg[11][1] = kg[1][11] =  T/10.0/Dsy
 	kg[7][5]  = kg[5][7]   =  kg[11][7] = kg[7][11] = -T/10.0/Dsy
-	
+
 	kg[3][9]  = kg[9][3]   = -kg[3][3]
-	
+
 	kg[7][1]  = kg[1][7]   = -T/L*(1.2+2.0*Ksy+Ksy*Ksy)/Dsy
 	kg[8][2]  = kg[2][8]   = -T/L*(1.2+2.0*Ksz+Ksz*Ksz)/Dsz
 
@@ -280,7 +280,7 @@ def geometric_K(beam_props):
 
 	# Check and enforce symmetry of the elastic stiffness matrix for the element
 	kg = 0.5*(kg+kg.T)
-	
+
 	return [kg[:6,:6],kg[6:,:6],kg[:6,6:],kg[6:,6:]]
 
 def pop_k(beam_props):
@@ -297,8 +297,8 @@ def pop_k(beam_props):
 	# Iz 	: bending moment of inertia, z direction
 	# p 	: The roll angle (radians)
 	# T 	: internal element end force
-	# shear : whether shear effects are considered. 
-	
+	# shear : whether shear effects are considered.
+
 	xn1 	= beam_props["xn1"]
 	xn2 	= beam_props["xn2"]
 	L   	= beam_props["Le"]
@@ -329,25 +329,25 @@ def pop_k(beam_props):
 	data = np.zeros(30)
 	rows = np.array([0,1,2,3,4,5,5,4,2,1])
 	cols = np.array([0,1,2,3,4,5,1,2,4,5])
-	
-	
+
+
 
 	return data,rows,cols
 
 
- #####  ####### #       #     # ####### ######  
-#     # #     # #       #     # #       #     # 
-#       #     # #       #     # #       #     # 
- #####  #     # #       #     # #####   ######  
-      # #     # #        #   #  #       #   #   
-#     # #     # #         # #   #       #    #  
- #####  ####### #######    #    ####### #     # 
+ #####  ####### #       #     # ####### ######
+#     # #     # #       #     # #       #     #
+#       #     # #       #     # #       #     #
+ #####  #     # #       #     # #####   ######
+      # #     # #        #   #  #       #   #
+#     # #     # #         # #   #       #    #
+ #####  ####### #######    #    ####### #     #
 
 def solve_system(K,nodemap,D,forces,con_dof):
 	# we want to solve the matrix equation
 	# |Kqq Kqr||xq| = |fq  |
 	# |Krq Krr||xr|   |fr+c|
-	# Where K, xr, fq, and fr are known. 
+	# Where K, xr, fq, and fr are known.
 
 	#First step is to organize K, x, and f into that form
 	#(we will use nodemap)
@@ -366,7 +366,7 @@ def solve_system(K,nodemap,D,forces,con_dof):
 	'''
 	#splitting the reorganized matrix up into the partially solved equations
 	[Kqq,Kqr,Krq,Krr] = [K[:spl_dex,:spl_dex],K[:spl_dex,spl_dex:],K[spl_dex:,:spl_dex],K[spl_dex:,spl_dex:]]
-	#K1 = np.hsplit(K,np.array([spl_dex])) 
+	#K1 = np.hsplit(K,np.array([spl_dex]))
 	#[Kqq,Krq] = np.vsplit(K1[0],np.array([spl_dex]))
 	#[Kqr,Krr] = np.vsplit(K1[1],np.array([spl_dex]))
 	#print(Kqq)
@@ -377,7 +377,7 @@ def solve_system(K,nodemap,D,forces,con_dof):
 
 	[xq,xr] = [D[:spl_dex],D[spl_dex:]]#np.split(D,[spl_dex])
 	[fq,fr] = [forces[:spl_dex],forces[spl_dex:]]#np.split(forces,[spl_dex])
-	
+
 	#xq = co.matrix(xq)
 	#xr = co.matrix(xr)
 	#fq = co.matrix(fq)
@@ -389,16 +389,16 @@ def solve_system(K,nodemap,D,forces,con_dof):
 	Kqr_xr = Kqr*xr
 	b = fq-Kqr_xr
 	#print(b,fq,Kqr_xr,Kqq)
-	
+
 	try:
 		#tKqq = np.array(co.matrix(Kqq))
 		#tb = np.array(co.matrix(b))
 		#tC = sp.linalg.cho_factor(tKqq)
 		#xq = sp.linalg.cho_solve(tC,tb)
 
-		# Sparse Solver- using the CVXOPT cholesky solver 
+		# Sparse Solver- using the CVXOPT cholesky solver
 		cholmod.linsolve(Kqq,b)
-		xq = b 
+		xq = b
 
 	except Exception,e:
 		print(type(e))
@@ -415,7 +415,7 @@ def solve_system(K,nodemap,D,forces,con_dof):
 
 	D = co.matrix(np.append(xq,xr))
 	C = co.matrix(np.append(np.zeros(spl_dex),cr))
-	
+
 	K = nodemap*K*nodemap
 	forces = nodemap*forces
 	D = nodemap*D
@@ -431,14 +431,14 @@ def solve_system(K,nodemap,D,forces,con_dof):
 	'''
 	return D,C
 
-####### ####### ######   #####  #######  #####  
-#       #     # #     # #     # #       #     # 
-#       #     # #     # #       #       #       
-#####   #     # ######  #       #####    #####  
-#       #     # #   #   #       #             # 
-#       #     # #    #  #     # #       #     # 
-#       ####### #     #  #####  #######  #####  
-                                                
+####### ####### ######   #####  #######  #####
+#       #     # #     # #     # #       #     #
+#       #     # #     # #       #       #
+#####   #     # ######  #       #####    #####
+#       #     # #   #   #       #             #
+#       #     # #    #  #     # #       #     #
+#       ####### #     #  #####  #######  #####
+
 
 def assemble_loads(nodalloads,constraints,nodes, beamsets,global_args,tot_dof,length_scaling):
 	# creates force vector b
@@ -459,20 +459,20 @@ def assemble_loads(nodalloads,constraints,nodes, beamsets,global_args,tot_dof,le
 			rho = args["rho"]
 			node_mass = args["node_mass"]
 			Ax = args["Ax"]
-			L = args["Le"] 
+			L = args["Le"]
 			for beam in beamset:
 				t = pfeautil.coord_trans(nodes[beam[0]],nodes[beam[1]],L,args["roll"])
-				
+
 				tq = t[3:6]
 				tr = t[6:9]
-				
+
 				mom = np.cross(np.cross(tq,tr),grav)
 				mech_forces[6*beam[0]+0] += (0.5*rho*Ax*L+node_mass)*grav[0]
-				mech_forces[6*beam[0]+1] += (0.5*rho*Ax*L+node_mass)*grav[1] 
+				mech_forces[6*beam[0]+1] += (0.5*rho*Ax*L+node_mass)*grav[1]
 				mech_forces[6*beam[0]+2] += (0.5*rho*Ax*L+node_mass)*grav[2]
 
 				mech_forces[6*beam[1]+0] += (0.5*rho*Ax*L+node_mass)*grav[0]
-				mech_forces[6*beam[1]+1] += (0.5*rho*Ax*L+node_mass)*grav[1] 
+				mech_forces[6*beam[1]+1] += (0.5*rho*Ax*L+node_mass)*grav[1]
 				mech_forces[6*beam[1]+2] += (0.5*rho*Ax*L+node_mass)*grav[2]
 
 				mech_forces[6*beam[0]+3] += ( 1.0/12.0*rho*Ax*L*L)*mom[0]
@@ -483,17 +483,17 @@ def assemble_loads(nodalloads,constraints,nodes, beamsets,global_args,tot_dof,le
 				mech_forces[6*beam[1]+4] += (-1.0/12.0*rho*Ax*L*L)*mom[1]
 				mech_forces[6*beam[1]+5] += (-1.0/12.0*rho*Ax*L*L)*mom[2]
 
-	#Thermal loads assume a linear temperature gradient through 
-	#cross sections. Thermal loads are specified by values for 
-	#the coefficient of thermal expansion, the depth of the 
-	#section in the local y direction, the depth of the section 
-	#in the local z direction, and the temperature changes 
-	#on the +y surface, the -y surface, the +z surface, 
-	#and the -z surface. Thermal loads are applied over the 
+	#Thermal loads assume a linear temperature gradient through
+	#cross sections. Thermal loads are specified by values for
+	#the coefficient of thermal expansion, the depth of the
+	#section in the local y direction, the depth of the section
+	#in the local z direction, and the temperature changes
+	#on the +y surface, the -y surface, the +z surface,
+	#and the -z surface. Thermal loads are applied over the
 	#entire frame element.
 	for beamset, beamloads,args in beamsets:
 		for beamload in beamloads:
-			#Constructing a block diagonal transform matrix 
+			#Constructing a block diagonal transform matrix
 			t = pfeautil.coord_trans(nodes[beam[0]],nodes[beam[1]],L,args["roll"])
 			tmat = np.reshape(t,(3,3)).T
 			tblock = scipy.linalg.block_diag(tmat,tmat,tmat,tmat)
@@ -537,7 +537,7 @@ def element_end_forces(nodes,Q,beam_sets,D):
 	for beamset,beamloads,bargs in beam_sets:
 		#every beam set lists the physical properties
 		#associated with that beam
-		
+
 		#transfer those properties over
 		beam_props = {"Ax"		: bargs["Ax"],
 					  "Asy"		: bargs["Asy"],
@@ -563,7 +563,7 @@ def element_end_forces(nodes,Q,beam_sets,D):
 			beam_props["xn1"] = xn1
 			beam_props["xn2"] = xn2
 
-			beam_props["Le"]  = sqrt((xn2[0]-xn1[0])**2+(xn2[1]-xn1[1])**2+(xn2[2]-xn1[2])**2) 
+			beam_props["Le"]  = sqrt((xn2[0]-xn1[0])**2+(xn2[1]-xn1[1])**2+(xn2[2]-xn1[2])**2)
 			#Things that are not faster than the above:
 			#   sp.spatial.distance.euclidean(xn2,xn1)
 			#beam_props["eqF_mech"] = Null
@@ -588,7 +588,7 @@ def frame_element_force(s,beam_props):
 	# Iz 	: bending moment of inertia, z direction
 	# p 	: The roll angle (radians)
 	# T 	: internal element end force
-	# shear : whether shear effects are considered. 
+	# shear : whether shear effects are considered.
 	xn1		= beam_props["xn1"]
 	xn2		= beam_props["xn2"]
 	dn1 	= beam_props["dn1"]
@@ -621,19 +621,19 @@ def frame_element_force(s,beam_props):
 		Dsy = Dsz = 1.0
 
 	del1  = np.dot(dn2[0:3]-dn1[0:3],t[0:3]) # (d7-d1)*t1 + (d8-d2)*t2 + (d9-d3)*t3 	II
-	del2  = np.dot(dn2[0:3]-dn1[0:3],t[3:6]) # (d7-d1)*t4 + (d8-d2)*t5 + (d9-d3)*t6 	III 
+	del2  = np.dot(dn2[0:3]-dn1[0:3],t[3:6]) # (d7-d1)*t4 + (d8-d2)*t5 + (d9-d3)*t6 	III
 	del3  = np.dot(dn2[0:3]-dn1[0:3],t[6:9]) # (d7-d1)*t7 + (d8-d2)*t8 + (d9-d3)*t9 	III
 
-	# del4  = np.dot(dn2[3:6]+dn1[3:6],t[0:3]) # (d4+d10)*t1 + (d5+d11)*t2 + (d6+d12)*t3  
+	# del4  = np.dot(dn2[3:6]+dn1[3:6],t[0:3]) # (d4+d10)*t1 + (d5+d11)*t2 + (d6+d12)*t3
 	del5  = np.dot(dn2[3:6]+dn1[3:6],t[3:6]) # (d4+d10)*t4 + (d5+d11)*t5 + (d6+d12)*t6  I
 	del6  = np.dot(dn2[3:6]+dn1[3:6],t[6:9]) # (d4+d10)*t7 + (d5+d11)*t8 + (d6+d12)*t9 	I
-	
-	del7  = np.dot(dn2[3:6]-dn1[3:6],t[0:3]) # (d10-d4)*t1 + (d11-d5)*t2 + (d12-d6)*t3 
-	# del8  = np.dot(dn2[3:6]-dn1[3:6],t[3:6]) # (d10-d4)*t4 + (d11-d5)*t5 + (d12-d6)*t6 
-	# del9  = np.dot(dn2[3:6]-dn1[3:6],t[6:9]) # (d10-d4)*t7 + (d11-d5)*t8 + (d12-d6)*t9 	
+
+	del7  = np.dot(dn2[3:6]-dn1[3:6],t[0:3]) # (d10-d4)*t1 + (d11-d5)*t2 + (d12-d6)*t3
+	# del8  = np.dot(dn2[3:6]-dn1[3:6],t[3:6]) # (d10-d4)*t4 + (d11-d5)*t5 + (d12-d6)*t6
+	# del9  = np.dot(dn2[3:6]-dn1[3:6],t[6:9]) # (d10-d4)*t7 + (d11-d5)*t8 + (d12-d6)*t9
 
 	# del10 = np.dot(dn1[3:6],t[0:3])			 # d4 *t1 + d5 *t2 + d6 *t3
-	del11 = np.dot(dn1[3:6],t[3:6])			 # d4 *t4 + d5 *t5 + d6 *t6 
+	del11 = np.dot(dn1[3:6],t[3:6])			 # d4 *t4 + d5 *t5 + d6 *t6
 	del12 = np.dot(dn1[3:6],t[6:9])			 # d4 *t7 + d5 *t8 + d6 *t9
 
 	# del13 = np.dot(dn2[3:6],t[0:3])			 # d10*t1 + d11*t2 + d12*t3
@@ -644,7 +644,7 @@ def frame_element_force(s,beam_props):
 
 	#Axial force component
 	s[0]  =  -(Ax*E/Le)*del1
-	
+
 	T = -s[0]
 	#if geom:
 	#T = -s[1]
@@ -655,7 +655,7 @@ def frame_element_force(s,beam_props):
 		         del6*( 6.*E*Iz/(Le*Le*(1.+Ksy)) + T/10.0/Dsy)
 	# positive Vz in local z direction
 	s[2]  = -1.0*del3*(12.*E*Iy/(Le*Le*Le*(1.+Ksz)) + T/L*(1.2+2.0*Ksz+Ksz*Ksz)/Dsz) - \
-		         del5*( 6.*E*Iy/(Le*Le*(1.+Ksz)) + T/10.0/Dsz) 
+		         del5*( 6.*E*Iy/(Le*Le*(1.+Ksz)) + T/10.0/Dsz)
 	#Torsion Forces
 	# positive Tx r.h.r. about local x axis
 	s[3]  = -1.0*del7*(G*J/Le)
@@ -665,32 +665,32 @@ def frame_element_force(s,beam_props):
 	s[4]  =  1.0*del3*( 6.*E*Iy/(Le*Le*(1.+Ksz)) + T/10.0/Dsz) + \
 		         del11*((4.+Ksz)*E*Iy/(Le*(1.+Ksz)) + T*L*(2.0/15.0+Ksz/6.0+Ksz*Ksz/12.0)/Dsz ) + \
 		         del14*((2.-Ksz)*E*Iy/(Le*(1.+Ksz)) - T*L*(1.0/30.0+Ksz/6.0+Ksz*Ksz/12.0)/Dsz )
-	#positive Mz -> positive x-y curvature	         
+	#positive Mz -> positive x-y curvature
 	s[5]  = -1.0*del2*( 6.*E*Iz/(Le*Le*(1.+Ksy)) + T/10.0/Dsy) + \
 			     del12*((4.+Ksy)*E*Iz/(Le*(1.+Ksy)) + T*L*(2.0/15.0+Ksy/6.0+Ksy*Ksy/12.0)/Dsy ) + \
-				 del15*((2.-Ksy)*E*Iz/(Le*(1.+Ksy)) - T*L*(1.0/30.0+Ksy/6.0+Ksy*Ksy/12.0)/Dsy ) 
+				 del15*((2.-Ksy)*E*Iz/(Le*(1.+Ksy)) - T*L*(1.0/30.0+Ksy/6.0+Ksy*Ksy/12.0)/Dsy )
 
 	s[6]  = -s[0];
-	s[7]  = -s[1]; 
-	s[8]  = -s[2]; 
-	s[9]  = -s[3]; 
+	s[7]  = -s[1];
+	s[8]  = -s[2];
+	s[9]  = -s[3];
 
 	s[10] =  1.0*del3*( 6.*E*Iy/(Le*Le*(1.+Ksz)) + T/10.0/Dsz ) + \
 				 del14*((4.+Ksz)*E*Iy/(Le*(1.+Ksz)) + T*L*(2.0/15.0+Ksz/6.0+Ksz*Ksz/12.0)/Dsz ) + \
 				 del11*((2.-Ksz)*E*Iy/(Le*(1.+Ksz)) - T*L*(1.0/30.0+Ksz/6.0+Ksz*Ksz/12.0)/Dsz )
 	s[11] = -1.0*del2*( 6.*E*Iz/(Le*Le*(1.+Ksy)) + T/10.0/Dsy ) + \
 				 del15*((4.+Ksy)*E*Iz/(Le*(1.+Ksy)) + T*L*(2.0/15.0+Ksy/6.0+Ksy*Ksy/12.0)/Dsy ) + \
-				 del12*((2.-Ksy)*E*Iz/(Le*(1.+Ksy)) - T*L*(1.0/30.0+Ksy/6.0+Ksy*Ksy/12.0)/Dsy ) 
+				 del12*((2.-Ksy)*E*Iz/(Le*(1.+Ksy)) - T*L*(1.0/30.0+Ksy/6.0+Ksy*Ksy/12.0)/Dsy )
 
 
 '''
-EQUILIBRIUM_ERROR -  
-compute: {dF_q} =   {F_q} - [K_qq]{D_q} - [K_qr]{D_r} 
+EQUILIBRIUM_ERROR -
+compute: {dF_q} =   {F_q} - [K_qq]{D_q} - [K_qr]{D_r}
  return: dF and ||dF||/||F||
 '''
 def equilibrium_error(K,nodemap,F,D,tot_dof,con_dof):
-	
-	#First, reorganize K, F, D so that 
+
+	#First, reorganize K, F, D so that
 	#
 	K = nodemap*K*nodemap
 	F = nodemap*F
@@ -707,7 +707,7 @@ def equilibrium_error(K,nodemap,F,D,tot_dof,con_dof):
 	#print(Fq.size,(K[0:q,0:q]*Dt[0:q]).size,(K[0:q,q:tot_dof]*D[q:tot_dof]).size)
 	dF = Fq - K[0:q,0:q]*D[0:q] - K[0:q,q:tot_dof]*D[q:tot_dof]
 	dF = co.matrix(np.append(np.array(dF),np.zeros(con_dof)))
-	
+
 	K = nodemap*K*nodemap
 	F = nodemap*F
 	dF = nodemap*dF
@@ -731,76 +731,76 @@ def equilibrium_error(K,nodemap,F,D,tot_dof,con_dof):
 
 
 
-   #    #     #    #    #       #     # ####### ####### 
-  # #   ##    #   # #   #        #   #       #  #       
- #   #  # #   #  #   #  #         # #       #   #       
-#     # #  #  # #     # #          #       #    #####   
-####### #   # # ####### #          #      #     #       
-#     # #    ## #     # #          #     #      #       
-#     # #     # #     # #######    #    ####### ####### 
-                                                        
- #####  #     #  #####  ####### ####### #     # 
-#     #  #   #  #     #    #    #       ##   ## 
-#         # #   #          #    #       # # # # 
- #####     #     #####     #    #####   #  #  # 
-      #    #          #    #    #       #     # 
-#     #    #    #     #    #    #       #     # 
- #####     #     #####     #    ####### #     # 
+   #    #     #    #    #       #     # ####### #######
+  # #   ##    #   # #   #        #   #       #  #
+ #   #  # #   #  #   #  #         # #       #   #
+#     # #  #  # #     # #          #       #    #####
+####### #   # # ####### #          #      #     #
+#     # #    ## #     # #          #     #      #
+#     # #     # #     # #######    #    ####### #######
 
-''' 
+ #####  #     #  #####  ####### ####### #     #
+#     #  #   #  #     #    #    #       ##   ##
+#         # #   #          #    #       # # # #
+ #####     #     #####     #    #####   #  #  #
+      #    #          #    #    #       #     #
+#     #    #    #     #    #    #       #     #
+ #####     #     #####     #    ####### #     #
+
+'''
 	ALGORITHM DETAILS:
 	(Source: http://svn.code.sourceforge.net/p/frame3dd/code/trunk/doc/Frame3DD-manual.html)
-    1. Assemble the elastic structural stiffness matrix 
+    1. Assemble the elastic structural stiffness matrix
        for the un-stressed structure, K(D=0).
-    2. Compute the node displacements due to temperature 
-       loads, Ft, using a linear elastic analysis, 
+    2. Compute the node displacements due to temperature
+       loads, Ft, using a linear elastic analysis,
             Kqq (0) Dtq = Ftq.
     3. If geometric stiffness effects are to be considered,
-       3a. Compute frame element end forces from the 
+       3a. Compute frame element end forces from the
            displacements due to temperature loads, Q(Dt).
        3b. Assemble the structural stiffness matrix again,
            making use of the axial frame element forces
-           arising from the temperature loads, K(Dt). 
+           arising from the temperature loads, K(Dt).
     4. Compute the node displacements due to mechanical loads,
-       Fm, only, including prescribed joint displacements, 
+       Fm, only, including prescribed joint displacements,
            Kqq (Dt) Dmq = Fmq - Kqr (Dt) Dr.
        (For a linear-elastic analysis, neglecting geometric
         stiffness, K = K(0).)
-    5. Add the node displacements due to mechanical loads 
-       to the node displacements due to temperature loads, 
+    5. Add the node displacements due to mechanical loads
+       to the node displacements due to temperature loads,
            D1 = Dt + Dm,
-       and combine the temperature and mechanical loads, 
+       and combine the temperature and mechanical loads,
            F = Ft + Fm.
-    6. Compute frame element end forces from the 
+    6. Compute frame element end forces from the
        displacements due to the combined temperature and
        mechanical loads, Q(D1).
     7. If geometric stiffness effects are to be considered,
        carry out a second-order analysis via quasi Newton-
-       Raphson iterations in order to converge upon the 
+       Raphson iterations in order to converge upon the
        displacements that satisfy equilibrium (starting with i=1).
-       7a. Assemble the structural stiffness matrix again, 
-           now making use of the axial frame element forces 
-           arising from the combined temperature and mechanical 
+       7a. Assemble the structural stiffness matrix again,
+           now making use of the axial frame element forces
+           arising from the combined temperature and mechanical
            loads, K(D(i)),
-       7b. Compute the equilibrium error at displacements 
+       7b. Compute the equilibrium error at displacements
                D(i): dFq(i) = Fq - Kqq(D(i)) Dq(i) - Kqr(D(i)) Dr
-       7c. Compute the RMS relative equilibrium error criterion 
+       7c. Compute the RMS relative equilibrium error criterion
                || dFq(i) || / || Fq ||
-       7d. Solve for the incremental displacements, 
+       7d. Solve for the incremental displacements,
                dD(i): Kqq(D(i)) dDq(i) = dFq(i)
-       7e. Increment the displacements: 
+       7e. Increment the displacements:
                Dq(i+1) = Dq(i) + dDq(i)
        7f. Compute frame element end forces from the displacements
            due to the combined temperature and mechanical loads, Q(D(i)).
        7g. The Newton-Raphson iterations have converged when the
            root-mean-square relative equilibrium error (the root-
-           mean-squre of dFq(i) divided by the root-mean-square of 
-           Fq computed in step 3., above) is less than the specified 
+           mean-squre of dFq(i) divided by the root-mean-square of
+           Fq computed in step 3., above) is less than the specified
            tolerance.
-       7h. The convergence tolerance is taken as the convergence 
-           tolerance for the dynamic modal analysis. 
-           The default value is 10-9. 
-    8. Compute the reaction forces for the converged solution: 
+       7h. The convergence tolerance is taken as the convergence
+           tolerance for the dynamic modal analysis.
+           The default value is 10-9.
+    8. Compute the reaction forces for the converged solution:
            Rr = Krq(D(i)) Dq(i) + Krr(D(i)) Dr - Fr
 
     Notation:
@@ -816,7 +816,7 @@ def equilibrium_error(K,nodemap,F,D,tot_dof,con_dof):
         dFq(i) is the equilibrium error vector at iteration i
         dDq(i) is the incremental displacement vector at iteration i
         Dq(i+1) is the vector of uknown displacements at iteration i+1
-        Q(D(i)) is the set of frame element end forces at iteration i 
+        Q(D(i)) is the set of frame element end forces at iteration i
 '''
 def analyze_System(nodes, global_args, beamsets, constraints, nodalloads):
 	'''
@@ -824,36 +824,36 @@ def analyze_System(nodes, global_args, beamsets, constraints, nodalloads):
   global_args | contains information about the whole problem:
   			     > 		 node_radius | is a rigid node radius
                  > 			 n_modes | is the number of dynamic modes to compute
-                 > 	  length_scaling | is a spatial scale for numerical purposes. 
+                 > 	  length_scaling | is a spatial scale for numerical purposes.
                                      | All lengths are multiplied, other units adjusted appropriately.
                  > frame3dd_filename | is the name of the CSV input file for frame3dd that is written.
-    beam_sets | is a list of tuples beams,args.  
+    beam_sets | is a list of tuples beams,args.
     	beams | is a numpy array of ints of shape (-1,2) referencing into nodes
     	 args | is a dictionary containing properties of the corresponding beam_set.  It must contain
 		         >   'E': young's modulus
 		         >  'nu': poisson ratio
-		         > 'rho': density 
+		         > 'rho': density
 		         >  'dx': x dimension of cross section
 		         >  'dy': y dimension of cross section
   constraints | are both lists of dictionaries with keys ['node','DOF','value']
-    and loads | 
+    and loads |
     	         >
 	'''
 
-	try: 
-		n_modes = global_args['n_modes'] 
-	except(KeyError): 
+	try:
+		n_modes = global_args['n_modes']
+	except(KeyError):
 		n_modes = 0
-	try: 
+	try:
 		length_scaling = global_args['length_scaling']
-	except(KeyError): 
+	except(KeyError):
 		length_scaling = 1.
-	try: 
-		node_radius = global_args['node_radius']*length_scaling 
+	try:
+		node_radius = global_args['node_radius']*length_scaling
 	except(KeyError):
 		node_radius=np.zeros(np.shape(nodes)[0])
 
-	nE = sum(map(lambda x: np.shape(x[0])[0], beamsets))    
+	nE = sum(map(lambda x: np.shape(x[0])[0], beamsets))
 	nodes = nodes*length_scaling
 
 	for beams, beamloads, args in beamsets:
@@ -871,7 +871,7 @@ def analyze_System(nodes, global_args, beamsets, constraints, nodalloads):
 			Asz = Asy
 			Jxx = .5*pi*(Ro**4-Ri**4)
 			Iyy = .25*pi*(Ro**4-Ri**4)
-			Izz = Iyy	
+			Izz = Iyy
 		elif args['cross_section']=='rectangular':
 			d2 = args['d2']*length_scaling
 			Ax = d1*d2
@@ -879,27 +879,27 @@ def analyze_System(nodes, global_args, beamsets, constraints, nodalloads):
 			Asz = Asy
 			Iyy = d1**3*d2/12.
 			Izz = d1*d2**3/12.
-			tmp = .33333 - 0.2244/(max(d1,d2)/min(d1,d2) + 0.1607); 
-			Jxx = tmp*max(d1,d2)*min(d1,d2)**3 
+			tmp = .33333 - 0.2244/(max(d1,d2)/min(d1,d2) + 0.1607);
+			Jxx = tmp*max(d1,d2)*min(d1,d2)**3
 		try:
 			args['shear'] = global_args['shear']
 		except:
 			args['shear'] = False
 		args['E']   = E
 		args['d1']  = d1
-		args['Ax']  = Ax 
+		args['Ax']  = Ax
 		args['Asy'] = Asy
 		args['Asz'] = Asz
 		args['J']   = Jxx
 		args['Iy']  = Iyy
-		args['Iz']  = Izz		
+		args['Iz']  = Izz
 		args['G']   = E/2./(1+nu)
 		args['rho'] = args['rho']/length_scaling/length_scaling/length_scaling
 		args['Le']  = args['Le']*length_scaling
-	
+
 	tot_dof = len(nodes)*6
 	con_dof = len(constraints) #constrained Degrees of Freedom
-	
+
 
 	global_args["dof"] = tot_dof
 	#calculate the node mapping that allows for straightforward
@@ -913,7 +913,7 @@ def analyze_System(nodes, global_args, beamsets, constraints, nodalloads):
 	R = co.matrix(0.0,(1,tot_dof))
 	dR = co.matrix(0.0,(1,tot_dof))
 
-	#Assemble the loads from the constraints etc. 
+	#Assemble the loads from the constraints etc.
 	F_mech, F_therm ,dP = assemble_loads(nodalloads,constraints,nodes,beamsets,global_args,tot_dof,length_scaling)
 
 	#print F_mech
@@ -931,20 +931,20 @@ def analyze_System(nodes, global_args, beamsets, constraints, nodalloads):
 
 
 	#Part 3
-	#We first calculate the frame element end forces due to 
+	#We first calculate the frame element end forces due to
 	#the displacements from the temperature loads
 	#Then we recalculate K due to these node displacements
 
 	#Q = element_end_forces(nodes,Q,beamsets,D)
 	#K = assemble_K(nodes,beamsets,Q,global_args)
- 
+
 	#Part 4
 	#Calculate the node displacements due to mechanical loads
 	#as well as prescribed node displacements
 	dD = dP
 	dD,dR = solve_system(K,node_map,dD,F_mech,con_dof)
-	
-	#Part 5 
+
+	#Part 5
 	#Add together displacements due to temperature and
 	#mechanical, as well as forces
 	D = D + dD.T
@@ -953,28 +953,28 @@ def analyze_System(nodes, global_args, beamsets, constraints, nodalloads):
 	#Part 6
 	F = F_mech#+F_therm
 	element_end_forces(nodes,Q, beamsets, D)
-	
+
 	error = 1.0
 	dF,error = equilibrium_error(K,node_map,F,D.T,tot_dof,con_dof)
-	
-	
+
+
 	#Part 7
 	#Quasi newton-raphson
 	it = 0
-	
+
 	if isinf(error):
 		error = 0.0
 		print("Something's wrong: did you remember to set loads? Skipping Quasi-Newton")
 		it = 11
-	
+
 	#print(error)
-	
+
 	lasterror = 1.0
 	error = 0.5
-	
+
 	while np.abs(error-lasterror) > 0.01*error and error > 1e-9 and it < 10:
 		it = it + 1
-		
+
 		K = assemble_K(nodes,beamsets,Q,global_args)
 		lasterror = error
 		dF,error = equilibrium_error(K,node_map,F,D.T,tot_dof,con_dof)
@@ -992,22 +992,22 @@ def analyze_System(nodes, global_args, beamsets, constraints, nodalloads):
 	fin_node_disp = np.zeros((len(nodes),3))
 
 	for n in range(len(nodes)):
-		fin_node_disp[n:,] = np.array([D[n*6],D[n*6+1],D[n*6+2]])	
-	
+		fin_node_disp[n:,] = np.array([D[n*6],D[n*6+1],D[n*6+2]])
+
 
 	return fin_node_disp,C,Q
 
 def provide_K(nodes, global_args, beam_sets):
-	
-	nE = sum(map(lambda x: np.shape(x[0])[0], beam_sets))    
+
+	nE = sum(map(lambda x: np.shape(x[0])[0], beam_sets))
 	Q = co.matrix(0.0,(nE,12))
-	
-	try: 
+
+	try:
 		length_scaling = global_args['length_scaling']
-	except(KeyError): 
+	except(KeyError):
 		length_scaling = 1.
-	
-	for beamset, args in beam_sets:
+
+	for beamset, beamload, args in beam_sets:
 		E = 1.0*args['E']/length_scaling/length_scaling
 		nu = args['nu']
 		d1 = args['d1']*length_scaling
@@ -1022,7 +1022,7 @@ def provide_K(nodes, global_args, beam_sets):
 			Asz = Asy
 			Jxx = .5*pi*(Ro**4-Ri**4)
 			Iyy = .25*pi*(Ro**4-Ri**4)
-			Izz = Iyy	
+			Izz = Iyy
 		elif args['cross_section']=='rectangular':
 			d2 = args['d2']*length_scaling
 			Ax = d1*d2
@@ -1030,26 +1030,22 @@ def provide_K(nodes, global_args, beam_sets):
 			Asz = Asy
 			Iyy = d1**3*d2/12.
 			Izz = d1*d2**3/12.
-			tmp = .33333 - 0.2244/(max(d1,d2)/min(d1,d2) + 0.1607); 
-			Jxx = tmp*max(d1,d2)*min(d1,d2)**3 
+			tmp = .33333 - 0.2244/(max(d1,d2)/min(d1,d2) + 0.1607);
+			Jxx = tmp*max(d1,d2)*min(d1,d2)**3
 		args['E']   = E
 		args['d1']  = d1
-		args['Ax']  = Ax 
+		args['Ax']  = Ax
 		args['Asy'] = Asy
 		args['Asz'] = Asz
 		args['J']   = Jxx
 		args['Iy']  = Iyy
-		args['Iz']  = Izz		
+		args['Iz']  = Izz
 		args['G']   = E/2./(1+nu)
 		args['rho'] = args['rho']/length_scaling/length_scaling/length_scaling
 		args['Le']  = args['Le']*length_scaling
-	
+
 	tot_dof = len(nodes)*6
-	
+
 	global_args["dof"] = tot_dof
 
 	return assemble_K(nodes,beam_sets,Q,global_args)
-
-
-
-

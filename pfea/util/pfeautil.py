@@ -42,12 +42,12 @@ def subdivide_topology(nodes,segs):
 
 def unique_points(a,tol=1e-5,leafsize=10):
     #Use KDTree to do uniqueness check within tolerance.
-    pairs = cKDTree(a,leafsize=leafsize).query_pairs(tol)  #pairs of (i,j) where i<j and d(a[i]-a[j])<tol    
+    pairs = cKDTree(a,leafsize=leafsize).query_pairs(tol)  #pairs of (i,j) where i<j and d(a[i]-a[j])<tol
     components = map( sorted, nx.connected_components(nx.Graph(data=list(pairs))) ) #sorted connected components of the proximity graph
     idx = delete( arange(shape(a)[0]),  list(itertools.chain(*[c[1:] for c in components])) ) #all indices of a, except nodes past first in each component
     inv = arange(shape(a)[0])
     for c in components: inv[c[1:]]=c[0]
-    inv = searchsorted(idx,inv) 
+    inv = searchsorted(idx,inv)
     return idx,inv
 def unique_reduce(nodes,*beamsets):
     #reduced_idx,reduced_inv = unique_rows(nodes)
@@ -107,7 +107,7 @@ def coord_trans(x_n1,x_n2,L,p):
         t[1] = Cy;
         t[2] = Cz;
 
-        t[3] = 1.0*(-Cx*Cz*Sp - Cy*Cp)/den;    
+        t[3] = 1.0*(-Cx*Cz*Sp - Cy*Cp)/den;
         t[4] = 1.0*(-Cy*Cz*Sp + Cx*Cp)/den;
         t[5] = Sp*den;
 
@@ -131,7 +131,7 @@ def atma(t,m):
         a[3*i+2,3*i] = t[6];
         a[3*i+2,3*i+1] = t[7];
         a[3*i+2,3*i+2] = t[8];
-    
+
     m = co.matrix(np.dot(np.dot(a.T,m),a))
 
     return m
@@ -140,31 +140,31 @@ def swap_Matrix_Rows(M,r1,r2):
     r1 = int(r1)
     r2 = int(r2)
     M[[r1,r2],:] = M[[r2,r1],:]
-    
+
 def swap_Matrix_Cols(M,c1,c2):
     c1 = int(c1)
     c2 = int(c2)
     M[:,[c1,c2]] = M[:,[c2,c1]]
-    
+
 def swap_Vector_Vals(V,i1,i2):
     V[[i1,i2]] = V[[i2,i1]]
 
 def gen_Node_map(nodes,constraints):
-    # we want to generate the map between the input K 
+    # we want to generate the map between the input K
     # and the easily-solved K
     ndof = len(nodes)*6
     index = ndof-len(constraints)
-    
+
     indptr = np.array(range(ndof))
     data = np.array([1.0]*ndof)
     row = np.array(range(ndof))
     col = np.array(range(ndof))
-    
+
     cdof_list = []
-    
+
     for constraint in constraints:
         cdof_list.append(constraint["node"]*6+constraint["DOF"])
-        
+
     for c_id in cdof_list:
         if c_id < ndof-len(constraints):
             not_found = True
@@ -178,7 +178,60 @@ def gen_Node_map(nodes,constraints):
                     index=index+1
 
 
-    return co.spmatrix(data,row,col) 
+    return co.spmatrix(data,row,col)
 
+def subdivide_Frames(nodes,beam_sets,beam_divisions):
+    #
+    # Credit goes to Sam Calisch for writing this code
+    #
+    beams = vstack([beams for beams,args in beam_sets])
+    beam_division_array = hstack([args['beam_divisions']*ones(shape(bs)[0],dtype=int) for bs,args in beam_sets])
+    #print(shape(beams)[0])
+    #print(shape(beam_division_array)[0])
+    assert(shape(beams)[0]==shape(beam_division_array)[0])
+    #subdivide elements
+    #add new_nodes after existing nodes
+    #create a mapping from old elements to new elements, so can apply loads
+    #beam_mapping = arange(shape(beams)[0])[...,None] #what new beams each original beam maps to
+    if any(beam_division_array > 1):
+        new_beams = []
+        new_nodes = []
+        beam_mapping = []
+        cur_node = shape(nodes)[0] #start new nodes after existing
+        cur_beam = 0
+        for j,b in enumerate(beams):
+            this_map = []
+            bdj = beam_division_array[j]
+            if bdj==1:
+                new_beams.append(b)
+                this_map.append(cur_beam); cur_beam += 1
+            else:
+                for i in range(bdj):
+                    t0 = i/bdj
+                    t1 = (i+1)/bdj
+                    x0 = nodes[b[0]]*(1-t0) + nodes[b[1]]*t0
+                    x1 = nodes[b[0]]*(1-t1) + nodes[b[1]]*t1
+                    if i==0:
+                        new_beams.append([b[0],cur_node])
+                        this_map.append(cur_beam); cur_beam += 1
+                    elif i==bdj-1:
+                        new_nodes.append(x0);
+                        new_beams.append([cur_node,b[1]])
+                        this_map.append(cur_beam); cur_beam += 1
+                        cur_node += 1
+                    else:
+                        new_nodes.append(x0)
+                        new_beams.append([cur_node,cur_node+1])
+                        this_map.append(cur_beam); cur_beam += 1
+                        cur_node += 1
+            beam_mapping.append(this_map)
 
-    
+        if len(new_nodes)>0:
+            nodes = vstack((nodes,asarray(new_nodes)))
+            node_radius = hstack((node_radius,zeros(len(new_nodes))))
+            n_beams += shape(new_nodes)[0]
+        beams = asarray(new_beams)
+        beam_mapping = asarray(beam_mapping)
+    else:
+        beam_mapping = arange(n_beams).reshape(-1,1)
+    return nodes, beams, beam_mapping
