@@ -53,7 +53,7 @@ def assemble_K(nodes,beam_sets,Q,args):
 		#associated with that beam
 
 		#transfer those properties over
-		beam_props = {"Ax"		:bargs["Ax"],
+		beam_props = {"Ax"		: bargs["Ax"],
 					  "Asy"		: bargs["Asy"],
 					  "Asz"		: bargs["Asz"],
 					  "G"		: bargs["G"],
@@ -853,6 +853,7 @@ def analyze_System(nodes, global_args, beamsets, constraints, nodalloads):
 	except(KeyError):
 		node_radius=np.zeros(np.shape(nodes)[0])
 
+	
 	nE = sum(map(lambda x: np.shape(x[0])[0], beamsets))
 	nodes = nodes*length_scaling
 

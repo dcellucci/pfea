@@ -29,21 +29,21 @@ def debugplot(nodes,framesets,res_displace,Q,loads,constraints,scale_factor=1,ax
     colors = []
     for i in range(len(nodes)):
         if(i in loadids):
-            colors.append((0.0,1.0,0.0,1.0))
+            colors.append((0.0,1.0,0.0,0.5))
         elif(i in constids):
-            colors.append((1.0,1.0,0.0,1.0))
+            colors.append((1.0,1.0,0.0,0.5))
         else:
             colors.append((1.0,1.0,1.0,0.5))
 
     displace_nodes = nodes+res_displace*scale_factor
-    #sp1 = gl.GLScatterPlotItem(pos=nodes,color=np.array(colors),size=0.1,pxMode=False)#, size=size, color=color, pxMode=False)
-    #sp1.translate(-centroid[0],-centroid[1],-centroid[2])
+    sp1 = gl.GLScatterPlotItem(pos=nodes,color=np.array(colors),size=0.01,pxMode=False)#, size=size, color=color, pxMode=False)
+    sp1.translate(-centroid[0],-centroid[1],-centroid[2])
 
-    #w.addItem(sp1)
+    w.addItem(sp1)
 
-    sp1d = gl.GLScatterPlotItem(pos=displace_nodes,color=(1.0,0.0,0.0,0.5),size=0.1,pxMode=False)#, size=size, color=color, pxMode=False)
-    sp1d.translate(-centroid[0],-centroid[1],-centroid[2])
-    w.addItem(sp1d)
+    #sp1d = gl.GLScatterPlotItem(pos=displace_nodes,color=(1.0,0.0,0.0,0.5),size=0.1,pxMode=False)#, size=size, color=color, pxMode=False)
+    #sp1d.translate(-centroid[0],-centroid[1],-centroid[2])
+    #w.addItem(sp1d)
     #
     # Calculating strain energy (axial)
     #
@@ -59,6 +59,9 @@ def debugplot(nodes,framesets,res_displace,Q,loads,constraints,scale_factor=1,ax
     qmax_ten = np.min(st_nrg)
     #print st_nrg
 
+    print np.shape(st_nrg)
+    print np.shape(framesets[0][0])
+    print np.shape(framesets)
     #print qmax_comp
     #print qmax_ten
     #print np.mean(abs(st_nrg))
@@ -73,8 +76,7 @@ def debugplot(nodes,framesets,res_displace,Q,loads,constraints,scale_factor=1,ax
     plt1.plot(x, y, stepMode=True, fillLevel=0, brush=(0,0,255,150))
 
 
-    factors = np.zeros((len(st_nrg),2))
-
+    factors = np.zeros((np.shape(st_nrg)[0],2))
     for i, strain in enumerate(st_nrg):
         if strain > 0:
             if abs(strain)/(pi**3*frame_args["E"]*frame_args["d1"]**4/(4*frame_args["Le"]**2)) > 1.0:
@@ -97,20 +99,26 @@ def debugplot(nodes,framesets,res_displace,Q,loads,constraints,scale_factor=1,ax
     plotframes = []
     colors = []
     #print np.shape(factors)
+    frame_index = 0
     frameset = framesets[0]
-    for frameset in [framesets[0]]:
-        for i,frame in enumerate(frameset[0]):
+    for frameset in framesets:
+        plotframes = []
+        colors = []
+        for frame in frameset[0]:
             nid1 = int(frame[0])
             nid2 = int(frame[1])
             plotframes.append(displace_nodes[nid1])
             plotframes.append(displace_nodes[nid2])
 
-            if(st_nrg[i] < 0 ):
-                colors.append((1.0,0.0,0.0,(1.0*factors[i][1]/max_ten)**1))
-                colors.append((1.0,0.0,0.0,(1.0*factors[i][1]/max_ten)**1))
+            if(st_nrg[frame_index] < 0 ):
+                colors.append((1.0,0.0,0.0,(1.0*factors[frame_index][1]/max_ten)**2))
+                colors.append((1.0,0.0,0.0,(1.0*factors[frame_index][1]/max_ten)**2))
             else:
-                colors.append((0.0,0.0,1.0,(1.0*factors[i][0]/max_com)**1))
-                colors.append((0.0,0.0,1.0,(1.0*factors[i][0]/max_com)**1))
+                colors.append((0.0,0.0,1.0,(1.0*factors[frame_index][0]/max_com)**2))
+                colors.append((0.0,0.0,1.0,(1.0*factors[frame_index][0]/max_com)**2))
+
+            frame_index += 1
+
         sp2 = gl.GLLinePlotItem(pos=np.array(plotframes),color=np.array(colors),mode='lines',antialias=True)
         sp2.translate(-centroid[0],-centroid[1],-centroid[2])
         w.addItem(sp2)

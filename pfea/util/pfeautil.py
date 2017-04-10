@@ -180,58 +180,51 @@ def gen_Node_map(nodes,constraints):
 
     return co.spmatrix(data,row,col)
 
-def subdivide_Frames(nodes,beam_sets,beam_divisions):
+def subdivide_Frames(nodes,beam_sets):
     #
-    # Credit goes to Sam Calisch for writing this code
+    # Modified from Sam Calisch's pfea code
+    # (Retains beamset structure)
     #
-    beams = vstack([beams for beams,args in beam_sets])
-    beam_division_array = hstack([args['beam_divisions']*ones(shape(bs)[0],dtype=int) for bs,args in beam_sets])
-    #print(shape(beams)[0])
-    #print(shape(beam_division_array)[0])
-    assert(shape(beams)[0]==shape(beam_division_array)[0])
-    #subdivide elements
-    #add new_nodes after existing nodes
-    #create a mapping from old elements to new elements, so can apply loads
-    #beam_mapping = arange(shape(beams)[0])[...,None] #what new beams each original beam maps to
-    if any(beam_division_array > 1):
+
+    #start at the last node (so we dont have to do reassignment)
+    cur_node = shape(nodes)[0]
+
+    #create a new array for the beamsets
+    new_beamsets = []
+    for beams, beamloads, args in beam_sets:
         new_beams = []
         new_nodes = []
-        beam_mapping = []
-        cur_node = shape(nodes)[0] #start new nodes after existing
-        cur_beam = 0
-        for j,b in enumerate(beams):
-            this_map = []
-            bdj = beam_division_array[j]
-            if bdj==1:
-                new_beams.append(b)
-                this_map.append(cur_beam); cur_beam += 1
-            else:
-                for i in range(bdj):
-                    t0 = i/bdj
-                    t1 = (i+1)/bdj
-                    x0 = nodes[b[0]]*(1-t0) + nodes[b[1]]*t0
-                    x1 = nodes[b[0]]*(1-t1) + nodes[b[1]]*t1
-                    if i==0:
-                        new_beams.append([b[0],cur_node])
-                        this_map.append(cur_beam); cur_beam += 1
-                    elif i==bdj-1:
-                        new_nodes.append(x0);
-                        new_beams.append([cur_node,b[1]])
-                        this_map.append(cur_beam); cur_beam += 1
-                        cur_node += 1
-                    else:
-                        new_nodes.append(x0)
-                        new_beams.append([cur_node,cur_node+1])
-                        this_map.append(cur_beam); cur_beam += 1
-                        cur_node += 1
-            beam_mapping.append(this_map)
-
+        #Check if the frame set even has divisions specified
+        if "beam_divisions" in args:
+            bd = args["beam_divisions"]
+            #check if specified divisions is > 1
+            #otherwise, there's nothing to do
+            if bd > 1:
+                #iterate through the beams in the set
+                for beam in beams:
+                    for i in range(bd):
+                        #increment indices, and find interim nodes
+                        t0 = i/bd
+                        t1 = (i+1)/bd
+                        x0 = nodes[beam[0]]*(1-t0) + nodes[beam[1]]*t0
+                        x1 = nodes[beam[0]]*(1-t1) + nodes[beam[1]]*t1
+                        if i==0:
+                            new_beams.append([beam[0],cur_node])
+                        elif i==bd-1:
+                            new_nodes.append(x0)
+                            new_beams.append([cur_node,beam[1]])
+                            cur_node += 1
+                        else:
+                            new_nodes.append(x0)
+                            new_beams.append([cur_node,cur_node+1])
+                            cur_node += 1
+                #divide the beamset length by the number of divisions
+                args["Le"] = args["Le"]/(bd)
+        #check if
         if len(new_nodes)>0:
-            nodes = vstack((nodes,asarray(new_nodes)))
-            node_radius = hstack((node_radius,zeros(len(new_nodes))))
-            n_beams += shape(new_nodes)[0]
-        beams = asarray(new_beams)
-        beam_mapping = asarray(beam_mapping)
-    else:
-        beam_mapping = arange(n_beams).reshape(-1,1)
-    return nodes, beams, beam_mapping
+            nodes = vstack((nodes,new_nodes))
+            #append the beamset tuple with the modified args and beam list
+            new_beamsets.append((np.array(new_beams),beamloads,args))
+        else:
+            new_beamsets.append((beams,beamloads,args))
+    return nodes, new_beamsets
