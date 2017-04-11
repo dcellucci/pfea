@@ -42,12 +42,12 @@ def subdivide_topology(nodes,segs):
 
 def unique_points(a,tol=1e-5,leafsize=10):
     #Use KDTree to do uniqueness check within tolerance.
-    pairs = cKDTree(a,leafsize=leafsize).query_pairs(tol)  #pairs of (i,j) where i<j and d(a[i]-a[j])<tol    
+    pairs = cKDTree(a,leafsize=leafsize).query_pairs(tol)  #pairs of (i,j) where i<j and d(a[i]-a[j])<tol
     components = map( sorted, nx.connected_components(nx.Graph(data=list(pairs))) ) #sorted connected components of the proximity graph
     idx = delete( arange(shape(a)[0]),  list(itertools.chain(*[c[1:] for c in components])) ) #all indices of a, except nodes past first in each component
     inv = arange(shape(a)[0])
     for c in components: inv[c[1:]]=c[0]
-    inv = searchsorted(idx,inv) 
+    inv = searchsorted(idx,inv)
     return idx,inv
 def unique_reduce(nodes,*beamsets):
     #reduced_idx,reduced_inv = unique_rows(nodes)
@@ -107,7 +107,7 @@ def coord_trans(x_n1,x_n2,L,p):
         t[1] = Cy;
         t[2] = Cz;
 
-        t[3] = 1.0*(-Cx*Cz*Sp - Cy*Cp)/den;    
+        t[3] = 1.0*(-Cx*Cz*Sp - Cy*Cp)/den;
         t[4] = 1.0*(-Cy*Cz*Sp + Cx*Cp)/den;
         t[5] = Sp*den;
 
@@ -131,7 +131,7 @@ def atma(t,m):
         a[3*i+2,3*i] = t[6];
         a[3*i+2,3*i+1] = t[7];
         a[3*i+2,3*i+2] = t[8];
-    
+
     m = co.matrix(np.dot(np.dot(a.T,m),a))
 
     return m
@@ -140,31 +140,31 @@ def swap_Matrix_Rows(M,r1,r2):
     r1 = int(r1)
     r2 = int(r2)
     M[[r1,r2],:] = M[[r2,r1],:]
-    
+
 def swap_Matrix_Cols(M,c1,c2):
     c1 = int(c1)
     c2 = int(c2)
     M[:,[c1,c2]] = M[:,[c2,c1]]
-    
+
 def swap_Vector_Vals(V,i1,i2):
     V[[i1,i2]] = V[[i2,i1]]
 
 def gen_Node_map(nodes,constraints):
-    # we want to generate the map between the input K 
+    # we want to generate the map between the input K
     # and the easily-solved K
     ndof = len(nodes)*6
     index = ndof-len(constraints)
-    
+
     indptr = np.array(range(ndof))
     data = np.array([1.0]*ndof)
     row = np.array(range(ndof))
     col = np.array(range(ndof))
-    
+
     cdof_list = []
-    
+
     for constraint in constraints:
         cdof_list.append(constraint["node"]*6+constraint["DOF"])
-        
+
     for c_id in cdof_list:
         if c_id < ndof-len(constraints):
             not_found = True
@@ -178,7 +178,53 @@ def gen_Node_map(nodes,constraints):
                     index=index+1
 
 
-    return co.spmatrix(data,row,col) 
+    return co.spmatrix(data,row,col)
 
+def subdivide_Frames(nodes,beam_sets):
+    #
+    # Modified from Sam Calisch's pfea code
+    # (Retains beamset structure)
+    #
 
-    
+    #start at the last node (so we dont have to do reassignment)
+    cur_node = shape(nodes)[0]
+
+    #create a new array for the beamsets
+    new_beamsets = []
+    for beams, beamloads, args in beam_sets:
+        new_beams = []
+        new_nodes = []
+        #Check if the frame set even has divisions specified
+        if "beam_divisions" in args:
+            bd = args["beam_divisions"]
+            #check if specified divisions is > 1
+            #otherwise, there's nothing to do
+            if bd > 1:
+                #iterate through the beams in the set
+                for beam in beams:
+                    for i in range(bd):
+                        #increment indices, and find interim nodes
+                        t0 = i/bd
+                        t1 = (i+1)/bd
+                        x0 = nodes[beam[0]]*(1-t0) + nodes[beam[1]]*t0
+                        x1 = nodes[beam[0]]*(1-t1) + nodes[beam[1]]*t1
+                        if i==0:
+                            new_beams.append([beam[0],cur_node])
+                        elif i==bd-1:
+                            new_nodes.append(x0)
+                            new_beams.append([cur_node,beam[1]])
+                            cur_node += 1
+                        else:
+                            new_nodes.append(x0)
+                            new_beams.append([cur_node,cur_node+1])
+                            cur_node += 1
+                #divide the beamset length by the number of divisions
+                args["Le"] = args["Le"]/(bd)
+        #check if
+        if len(new_nodes)>0:
+            nodes = vstack((nodes,new_nodes))
+            #append the beamset tuple with the modified args and beam list
+            new_beamsets.append((np.array(new_beams),beamloads,args))
+        else:
+            new_beamsets.append((beams,beamloads,args))
+    return nodes, new_beamsets

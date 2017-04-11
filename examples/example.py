@@ -13,24 +13,24 @@ import pfea.solver
 from math import *
 
 
-####### ######     #    #     # ####### 
-#       #     #   # #   ##   ## #       
-#       #     #  #   #  # # # # #       
-#####   ######  #     # #  #  # #####   
-#       #   #   ####### #     # #       
-#       #    #  #     # #     # #       
-#       #     # #     # #     # ####### 
-                                                 
-######  ####### ######  #     # #          #    ####### ### ####### #     # 
-#     # #     # #     # #     # #         # #      #     #  #     # ##    # 
-#     # #     # #     # #     # #        #   #     #     #  #     # # #   # 
-######  #     # ######  #     # #       #     #    #     #  #     # #  #  # 
-#       #     # #       #     # #       #######    #     #  #     # #   # # 
-#       #     # #       #     # #       #     #    #     #  #     # #    ## 
-#       ####### #        #####  ####### #     #    #    ### ####### #     # 
-                                                                            
+####### ######     #    #     # #######
+#       #     #   # #   ##   ## #
+#       #     #  #   #  # # # # #
+#####   ######  #     # #  #  # #####
+#       #   #   ####### #     # #
+#       #    #  #     # #     # #
+#       #     # #     # #     # #######
 
-#Default Material Matrix - NxNxN cubic grid 
+######  ####### ######  #     # #          #    ####### ### ####### #     #
+#     # #     # #     # #     # #         # #      #     #  #     # ##    #
+#     # #     # #     # #     # #        #   #     #     #  #     # # #   #
+######  #     # ######  #     # #       #     #    #     #  #     # #  #  #
+#       #     # #       #     # #       #######    #     #  #     # #   # #
+#       #     # #       #     # #       #     #    #     #  #     # #    ##
+#       ####### #        #####  ####### #     #    #    ### ####### #     #
+
+
+#Default Material Matrix - NxNxN cubic grid
 # at the moment:
 # 1's correspond to material being there
 # 0's correspond to no material
@@ -40,12 +40,12 @@ from math import *
 #resolution, each voxel is then subdivided into subdiv*subdiv*subdiv
 #voxels whose material value equals the parent value.
 # So  if subdiv = 2
-#				 	0 0 0 0 0 0 
-# 0 0 0   becomes 	0 0 0 0 0 0 
-# 0 1 0          	0 0 1 1 0 0 
+#				 	0 0 0 0 0 0
+# 0 0 0   becomes 	0 0 0 0 0 0
+# 0 1 0          	0 0 1 1 0 0
 # 0 0 0			 	0 0 1 1 0 0
 #				 	0 0 0 0 0 0
-#				 	0 0 0 0 0 0 
+#				 	0 0 0 0 0 0
 
 
 
@@ -88,7 +88,7 @@ for subdiv in range(1,2):
 		vox_pitch = 0.01/subdiv #m
 
 
-		node_radius = 0 
+		node_radius = 0
 
 		#STRUT PROPERTIES
 		#Physical Properties
@@ -105,7 +105,7 @@ for subdiv in range(1,2):
 					   "beam_divisions" : 0,
 					   "cross_section"  : 'rectangular',
 					   "roll": 0,
-					   "Le":0.56*vox_pitch}#1.0*vox_pitch/sqrt(2.0)} 
+					   "Le":0.56*vox_pitch}#1.0*vox_pitch/sqrt(2.0)}
 		'''
 		frame_props = {"nu"  : 0.33, #poisson's ratio
 					   "d1"	 : 0.000564/subdiv, #m
@@ -116,19 +116,19 @@ for subdiv in range(1,2):
 					   "beam_divisions" : 0,
 					   "cross_section"  : 'circular',
 					   "roll": 0,
-					   "Le":1.0*vox_pitch/sqrt(2.0)} 
+					   "Le":1.0*vox_pitch/sqrt(2.0)}
 		'''
 
 		#Node Map Population
-		#Referencing the geometry-specific cuboct.py file. 
+		#Referencing the geometry-specific cuboct.py file.
 		#Future versions might have different files?
 
 		#node_frame_map = np.zeros((subdiv,subdiv,subdiv,6))
 		#nodes,frames,node_frame_map,dims = kelvin.from_material(mat_matrix,vox_pitch)
 		#print(node_frame_map.shape)
 		#frame_props["Le"] = kelvin.frame_length(vox_pitch)
-		
-		
+
+
 		nodes,frames,node_frame_map,dims = pfea.geom.cuboct.from_material(mat_matrix,vox_pitch)
 		#print(node_frame_map.shape)
 		frame_props["Le"] = pfea.geom.cuboct.frame_length(vox_pitch)
@@ -149,7 +149,7 @@ for subdiv in range(1,2):
 				constraints.append({'node':node_frame_map[x][y][1][2],'DOF':3, 'value':0})
 				constraints.append({'node':node_frame_map[x][y][1][2],'DOF':4, 'value':0})
 				constraints.append({'node':node_frame_map[x][y][1][2],'DOF':5, 'value':0})
-				
+
 				#The top most nodes are assigned a z-axis load, as well as being
 				#constrained to translate in only the z-direction.
 				#loads.append(      {'node':node_frame_map[x][y][size_z][5],'DOF':2, 'value':-5.0})
@@ -165,19 +165,19 @@ for subdiv in range(1,2):
 		#dframes = cuboct.remove_frame([(int(size_x/2.0)+1,int(size_y/2.0)+1,int(size_z/2.0)+1),5],node_frame_map,dframes)
 
 
-		 #####  ### #     #    ####### #     # ####### ######  #     # ####### 
-		#     #  #  ##   ##    #     # #     #    #    #     # #     #    #    
-		#        #  # # # #    #     # #     #    #    #     # #     #    #    
-		 #####   #  #  #  #    #     # #     #    #    ######  #     #    #    
-		      #  #  #     #    #     # #     #    #    #       #     #    #    
-		#     #  #  #     #    #     # #     #    #    #       #     #    #    
-		 #####  ### #     #    #######  #####     #    #        #####     #  
- 
-		                                                                       
+		 #####  ### #     #    ####### #     # ####### ######  #     # #######
+		#     #  #  ##   ##    #     # #     #    #    #     # #     #    #
+		#        #  # # # #    #     # #     #    #    #     # #     #    #
+		 #####   #  #  #  #    #     # #     #    #    ######  #     #    #
+		      #  #  #     #    #     # #     #    #    #       #     #    #
+		#     #  #  #     #    #     # #     #    #    #       #     #    #
+		 #####  ### #     #    #######  #####     #    #        #####     #
+
+
 
 
 		#Group frames with their characteristic properties.
-		out_frames = [(np.array(frames),Null,{'E'   : frame_props["E"],
+		out_frames = [(np.array(frames),None,{'E'   : frame_props["E"],
 										 	  'rho' : frame_props["rho"],
 										 	  'nu'  : frame_props["nu"],
 										 	  'd1'  : frame_props["d1"],
@@ -192,7 +192,7 @@ for subdiv in range(1,2):
 		#Format node positions
 		out_nodes = np.array(nodes)
 
-		#Global Arguments 
+		#Global Arguments
 		global_args = {'frame3dd_filename': "test", 'length_scaling':1,"using_Frame3dd":False,"debug_plot":False, "gravity" : [0,0,0]}
 
 		if global_args["using_Frame3dd"]:
@@ -210,22 +210,22 @@ for subdiv in range(1,2):
 			if constraint["value"] != 0:
 				tot_force = tot_force + C[int(constraint["node"]*6+constraint["DOF"])]
 		#print(len(frames)*frame_props["d1"]*frame_props["d2"]*frame_props["Le"]/(subdiv*vox_pitch)**3)
-		
+
 		zheightvals.append([zheight,tot_force/(subdiv*vox_pitch)**2/(strain)])
 		print(zheight,tot_force/(subdiv*vox_pitch)**2/(strain))
 	vals.append([subdiv,zheightvals])
 print(vals)
 
 
- 
 
-######  ####### ######  #     #  #####  
-#     # #       #     # #     # #     # 
-#     # #       #     # #     # #       
-#     # #####   ######  #     # #  #### 
-#     # #       #     # #     # #     # 
-#     # #       #     # #     # #     # 
-######  ####### ######   #####   #####  
+
+######  ####### ######  #     #  #####
+#     # #       #     # #     # #     #
+#     # #       #     # #     # #
+#     # #####   ######  #     # #  ####
+#     # #       #     # #     # #     #
+#     # #       #     # #     # #     #
+######  ####### ######   #####   #####
 
 if global_args["debug_plot"]:
 	### Right now the debug plot only does x-y-z displacements, no twisting
@@ -273,7 +273,7 @@ if global_args["debug_plot"]:
 		dstart = [dxs[nid1],rys[nid1],rzs[nid1]]
 		dend   = [dxs[nid2],rys[nid2],rzs[nid2]]
 		ax.plot([dstart[0],dend[0]],[dstart[1],dend[1]],[dstart[2],dend[2]],color='b', alpha=0.1)
-	'''	
+	'''
 
 	#ax.scatter(xs,ys,zs, color='r',alpha=0.1)
 	ax.scatter(rxs,rys,rzs, color='b',alpha=0.3)

@@ -6,6 +6,10 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
+
+#
+# Making sure all three axes are equal scale
+#
 def axisEqual3D(ax):
     extents = np.array([getattr(ax, 'get_{}lim'.format(dim))() for dim in 'xyz'])
     sz = extents[:,1] - extents[:,0]
@@ -15,6 +19,9 @@ def axisEqual3D(ax):
     for ctr, dim in zip(centers, 'xyz'):
         getattr(ax, 'set_{}lim'.format(dim))(ctr - r, ctr + r)
 
+#
+# Debugplot
+#
 def debugplot(nodes,framesets,res_displace,Q,loads,scale_factor):
 	### Right now the debug plot only does x-y-z displacements, no twisting
 	xs = []
@@ -51,7 +58,7 @@ def debugplot(nodes,framesets,res_displace,Q,loads,scale_factor):
 
 	for i, strain in enumerate(st_nrg):
 		if strain > 0:
-			if abs(strain)/(pi**3*frame_args["E"]*frame_args["d1"]**4/(4*frame_args["Le"]**2)) > 1.0: 	
+			if abs(strain)/(pi**3*frame_args["E"]*frame_args["d1"]**4/(4*frame_args["Le"]**2)) > 1.0:
 				print("**DANGER AT FRAME ID {0}".format(i))
 			#print "element {0} safety factor".format(abs(strain)/(pi**3*frame_args["E"]*frame_args["d1"]**4/(4*frame_args["Le"]**2)))
 			factors[i][0] = abs(strain)/(pi**3*frame_args["E"]*frame_args["d1"]**4/(4*frame_args["Le"]**2))
@@ -60,7 +67,7 @@ def debugplot(nodes,framesets,res_displace,Q,loads,scale_factor):
 				print("**DANGER AT FRAME ID {0}".format(i))
 			#print "element {0} safety factor".format(abs(strain)/(37.5e6*frame_args["d1"]**2))
 			factors[i][1] = abs(strain)/(37.5e6*frame_args["d1"]**2)
-	
+
 	max_ten = np.max(factors.T[1])
 	max_com = np.max(factors.T[0])
 	for i,frame in enumerate(framesets[0][0]):
@@ -84,7 +91,7 @@ def debugplot(nodes,framesets,res_displace,Q,loads,scale_factor):
 		dstart = [dxs[nid1],rys[nid1],rzs[nid1]]
 		dend   = [dxs[nid2],rys[nid2],rzs[nid2]]
 		ax.plot([dstart[0],dend[0]],[dstart[1],dend[1]],[dstart[2],dend[2]],color='b', alpha=0.1)
-	'''	
+	'''
 
 	#plot loads
 	loadcoords = []
