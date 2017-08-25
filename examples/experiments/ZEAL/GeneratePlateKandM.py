@@ -37,8 +37,8 @@ import scipy.sparse.linalg as spLinAlg
 vox_pitch = 0.0762 #m
                                                                                 
 #Setting up a 2 by 2 by 4
-size_x = 7;
-size_y = 7;
+size_x = 2;
+size_y = 2;
 size_z = 1;
 
 #Temporary Material Matrix - NxNxN cubic grid (corresponding to cubic-octahedra)
@@ -157,8 +157,8 @@ reactions[:,3:7] = np.dot(np.cross(bottomDisp,reactForce),np.array([[1,0,0],[0,1
 np.savetxt('VoxelWorm.csv', out_frames[0][0], delimiter=',')'''
 
 #pfea.util.pfeautil.plotLattice(nodes,frames,res_displace,1)
-pfea.solver.write_K(out_nodes,out_frames,global_args,'A.txt')
-pfea.solver.write_M(out_nodes,out_frames,global_args,'M.txt')
+pfea.solver.write_K(out_nodes,out_frames,global_args,'A2X2.txt')
+pfea.solver.write_M(out_nodes,out_frames,global_args,'M2X2.txt')
 #pfea.util.pfeautil.writeCSV(nodes,res_displace,'Force12NCompression.csv')
 
 #M = pfea.solver.provide_M(out_nodes,out_frames,global_args)
