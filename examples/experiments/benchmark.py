@@ -30,7 +30,7 @@ from timeit import default_timer as timer
 #       #     # #       #     # #       #     #    #     #  #     # #    ## 
 #       ####### #        #####  ####### #     #    #    ### ####### #     # 
 
-maxDeminsion = 15
+maxDeminsion = 10
 #create numpy array for times
 times = np.zeros((pow(maxDeminsion-2,3),4))
 
@@ -168,13 +168,13 @@ for size_x in range(2,maxDeminsion):
             out_nodes = np.array(nodes)
                 
             #Global Arguments 
-            global_args = {'frame3dd_filename': os.path.join('experiments','Results','test'),"lump": False, 'length_scaling':1,"using_Frame3dd":False,"debug_plot":True, "gravity" : [0,0,0],"save_matrices":True}
+            global_args = {'frame3dd_filename': 'test',"lump": False, 'length_scaling':1,"using_Frame3dd":True,"debug_plot":True, "gravity" : [0,0,0],"save_matrices":True}
 
             if global_args["using_Frame3dd"]:
-                    frame3dd.write_frame3dd_file(out_nodes, global_args, out_frames, constraints,loads)
+                    pfea.frame3dd.write_frame3dd_file(out_nodes, global_args, out_frames, constraints,loads)
                     subprocess.call("frame3dd -i {0}.csv -o {0}.out -q".format(global_args["frame3dd_filename"]), shell=True)
-                    res_nodes, res_reactions = frame3dd.read_frame3dd_results(global_args["frame3dd_filename"])
-                    res_displace = frame3dd.read_frame3dd_displacements(global_args["frame3dd_filename"])
+                    res_nodes, res_reactions = pfea.frame3dd.read_frame3dd_results(global_args["frame3dd_filename"])
+                    res_displace = pfea.frame3dd.read_frame3dd_displacements(global_args["frame3dd_filename"])
             else:
                     res_displace,C,Q = pfea.solver.analyze_System(out_nodes, global_args, out_frames, constraints,loads)
 
@@ -183,4 +183,4 @@ for size_x in range(2,maxDeminsion):
             times[[size_z-2+(size_y-2)*(maxDeminsion-2)+(size_x-2)*pow(maxDeminsion-2,2)],1] = size_y
             times[[size_z-2+(size_y-2)*(maxDeminsion-2)+(size_x-2)*pow(maxDeminsion-2,2)],2] = size_z
             times[[size_z-2+(size_y-2)*(maxDeminsion-2)+(size_x-2)*pow(maxDeminsion-2,2)],3] = end-start
-np.savetxt('timing.csv', times, delimiter=',')
+np.savetxt('timingTest.csv', times, delimiter=',')
