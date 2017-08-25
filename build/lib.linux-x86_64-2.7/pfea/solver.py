@@ -353,7 +353,8 @@ def write_K(nodes,beam_sets,global_args,filename):
 		length_scaling = global_args['length_scaling']
 	except(KeyError): 
 		length_scaling = 1.
-		
+
+	beam_sets = update_Beam_Geo(beam_sets,global_args)
 	tot_dof = len(nodes)*6
         nE = sum(map(lambda x: np.shape(x[0])[0], beam_sets))
         nodes = nodes*length_scaling	
@@ -634,7 +635,8 @@ def write_M(nodes,beam_sets,global_args,filename):
 		length_scaling = global_args['length_scaling']
 	except(KeyError): 
 		length_scaling = 1.
-		
+
+	beam_sets = update_Beam_Geo(beam_sets,global_args)
 	tot_dof = len(nodes)*6
         nE = sum(map(lambda x: np.shape(x[0])[0], beam_sets))
         global_args["dof"] = tot_dof
@@ -1374,3 +1376,51 @@ def subspace(K,M,tot_dof,n_modes,V,tol):
                 d = sp.linalg.solve(K,v)
             #Come back and start with the ldl_mprove because adding an i to the begining would make it clear...
     return w
+
+def update_Beam_Geo(beam_sets,global_args):
+        try: 
+		length_scaling = global_args['length_scaling']
+	except(KeyError): 
+		length_scaling = 1.
+	for beamset, args in beam_sets:
+		E = 1.0*args['E']/length_scaling/length_scaling
+		nu = args['nu']
+		d1 = args['d1']*length_scaling
+		roll = args['roll']
+		if args['cross_section']=='circular':
+			Ro = .5*d1
+			args['th'] = args['th']*length_scaling
+			assert(0<args['th']<=Ro)
+			Ri  = Ro-args['th']
+			Ax  = pi*(Ro**2-Ri**2)
+			Asy = Ax/(0.54414 + 2.97294*(Ri/Ro) - 1.51899*(Ri/Ro)**2 )
+			Asz = Asy
+			Jxx = .5*pi*(Ro**4-Ri**4)
+			Iyy = .25*pi*(Ro**4-Ri**4)
+			Izz = Iyy	
+		elif args['cross_section']=='rectangular':
+			d2 = args['d2']*length_scaling
+			Ax = d1*d2
+			Asy = Ax*(5+5*nu)/(6+5*nu)
+			Asz = Asy
+			Iyy = d1**3*d2/12.
+			Izz = d1*d2**3/12.
+			tmp = .33333 - 0.2244/(max(d1,d2)/min(d1,d2) + 0.1607); 
+			Jxx = tmp*max(d1,d2)*min(d1,d2)**3 
+		try:
+			args['shear'] = global_args['shear']
+		except:
+			args['shear'] = False
+		args['E']   = E
+		args['d1']  = d1
+		args['Ax']  = Ax 
+		args['Asy'] = Asy
+		args['Asz'] = Asz
+		args['J']   = Jxx
+		args['Iy']  = Iyy
+		args['Iz']  = Izz		
+		args['G']   = E/2./(1+nu)
+		args['rho'] = args['rho']/length_scaling/length_scaling/length_scaling
+		args['Le']  = args['Le']*length_scaling
+
+	return beam_sets
