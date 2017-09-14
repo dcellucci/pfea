@@ -366,7 +366,7 @@ def write_K(nodes,beam_sets,global_args,filename):
 
 	for i in range(0,tot_dof):
                 for j in range(0,tot_dof):
-                        Kdense[i][j] = K[i*(j+1)+j]
+                        Kdense[i][j] = K[i,j]
 
         np.savetxt(filename,Kdense,delimiter=',')
 
@@ -648,7 +648,7 @@ def write_M(nodes,beam_sets,global_args,filename):
 
 	for i in range(0,tot_dof):
                 for j in range(0,tot_dof):
-                        Mdense[i][j] = M[i*(j+1)+j]
+                        Mdense[i][j] = M[i,j]
 
         np.savetxt(filename,Mdense,delimiter=',')
 

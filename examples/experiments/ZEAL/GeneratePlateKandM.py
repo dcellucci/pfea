@@ -13,6 +13,7 @@ import pfea.solver
 import os
 import cvxopt as co
 import scipy.sparse.linalg as spLinAlg
+import csv
 
 
 ####### ######     #    #     # ####### 
@@ -84,6 +85,13 @@ frame_props = {"nu"  : 0.36, #poisson's ratio +
 node_frame_map = np.zeros((size_x,size_y,size_z,6))
 nodes,frames,node_frame_map,dims = pfea.geom.cuboct.from_material(mat_matrix,vox_pitch)
 frame_props["Le"] = pfea.geom.cuboct.frame_length(vox_pitch)
+
+with open('nodes2X2.csv','wb') as nodeFile:
+    wr = csv.writer(nodeFile, quoting=csv.QUOTE_ALL)
+    wr.writerows(nodes)
+with open('edges2X2.csv','wb') as edgeFile:
+    wr2 = csv.writer(edgeFile, quoting=csv.QUOTE_ALL)
+    wr2.writerows(frames)
 
 force = 12
 weight = 72.2*9.8*1e-3
