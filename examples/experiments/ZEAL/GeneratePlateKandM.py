@@ -38,8 +38,8 @@ import csv
 vox_pitch = 0.0762 #m
                                                                                 
 #Setting up a 2 by 2 by 4
-size_x = 2;
-size_y = 2;
+size_x = 7;
+size_y = 7;
 size_z = 1;
 
 #Temporary Material Matrix - NxNxN cubic grid (corresponding to cubic-octahedra)
@@ -86,10 +86,10 @@ node_frame_map = np.zeros((size_x,size_y,size_z,6))
 nodes,frames,node_frame_map,dims = pfea.geom.cuboct.from_material(mat_matrix,vox_pitch)
 frame_props["Le"] = pfea.geom.cuboct.frame_length(vox_pitch)
 
-with open('nodes2X2.csv','wb') as nodeFile:
+with open('nodes7X7.csv','wb') as nodeFile:
     wr = csv.writer(nodeFile, quoting=csv.QUOTE_ALL)
     wr.writerows(nodes)
-with open('edges2X2.csv','wb') as edgeFile:
+with open('edges7X7.csv','wb') as edgeFile:
     wr2 = csv.writer(edgeFile, quoting=csv.QUOTE_ALL)
     wr2.writerows(frames)
 
@@ -165,8 +165,8 @@ reactions[:,3:7] = np.dot(np.cross(bottomDisp,reactForce),np.array([[1,0,0],[0,1
 np.savetxt('VoxelWorm.csv', out_frames[0][0], delimiter=',')'''
 
 #pfea.util.pfeautil.plotLattice(nodes,frames,res_displace,1)
-pfea.solver.write_K(out_nodes,out_frames,global_args,'A2X2.txt')
-pfea.solver.write_M(out_nodes,out_frames,global_args,'M2X2.txt')
+pfea.solver.write_K(out_nodes,out_frames,global_args,'A7X7.txt')
+pfea.solver.write_M(out_nodes,out_frames,global_args,'M7X7.txt')
 #pfea.util.pfeautil.writeCSV(nodes,res_displace,'Force12NCompression.csv')
 
 #M = pfea.solver.provide_M(out_nodes,out_frames,global_args)
