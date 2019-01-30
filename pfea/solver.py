@@ -5,7 +5,7 @@
 #import skcuda.linalg as sklinalg
 
 import numpy as np
-from util import pfeautil
+from pfea.util import pfeautil
 from math import *
 import scipy as sp
 
@@ -400,7 +400,7 @@ def solve_system(K,nodemap,D,forces,con_dof):
 		cholmod.linsolve(Kqq,b)
 		xq = b
 
-	except Exception,e:
+	except Exception as e:
 		print(type(e))
 		print(e)
 		print("Warning: Cholesky did not work")
