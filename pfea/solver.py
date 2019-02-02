@@ -108,7 +108,6 @@ def assemble_K(nodes,beam_sets,Q,args):
 				row[dat_dex:dat_dex+lendat] = trow[:]
 				col[dat_dex:dat_dex+lendat] = tcol[:]
 				dat_dex+=lendat
-
 	#print(data[dat_dex*size:(dat_dex+1)*size])
 	data = data[:dat_dex]
 	row = row[:dat_dex]
@@ -1001,12 +1000,16 @@ def analyze_System(nodes, global_args, beamsets, constraints, nodalloads):
 def provide_K(nodes, global_args, beam_sets):
 
 	nE = sum(map(lambda x: np.shape(x[0])[0], beam_sets))
-	Q = co.matrix(0.0,(nE,12))
 
 	try:
 		length_scaling = global_args['length_scaling']
 	except(KeyError):
 		length_scaling = 1.
+
+	try:
+		Q = global_args['self_stress']
+	except(KeyError):
+		Q = co.matrix(0.0,(nE,12))
 
 	for beamset, beamload, args in beam_sets:
 		E = 1.0*args['E']/length_scaling/length_scaling
@@ -1039,8 +1042,12 @@ def provide_K(nodes, global_args, beam_sets):
 		args['Asy'] = Asy
 		args['Asz'] = Asz
 		args['J']   = Jxx
-		args['Iy']  = Iyy
-		args['Iz']  = Izz
+		if args['pin-jointed']:
+			args['Iy'] = 0
+			args['Iz'] = 0
+		else:	
+			args['Iy']  = Iyy
+			args['Iz']  = Izz
 		args['G']   = E/2./(1+nu)
 		args['rho'] = args['rho']/length_scaling/length_scaling/length_scaling
 		args['Le']  = args['Le']*length_scaling
